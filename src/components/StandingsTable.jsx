@@ -91,7 +91,7 @@ function TeamCell({ code }) {
   return (
     <div className="flex items-center gap-2">
       <FlagIcon flagCode={team.flag_code} size={16} />
-      <KitIcon  color={team.kit_home} size={18} />
+      <KitIcon  colours={[team.kit_home ?? '#cccccc']} size={18} />
       <span className="text-white">{team.name || code}</span>
     </div>
   )

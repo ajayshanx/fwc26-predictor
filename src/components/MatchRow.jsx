@@ -3,6 +3,7 @@ import KitIcon  from './KitIcon'
 import FlagIcon from './FlagIcon'
 import { resultColour, isPredictionOpen } from '../utils/scoring'
 import { useApp } from '../context/AppContext'
+import { getMatchKits } from '../data/kits'
 
 /**
  * Shared match row for Schedule and My Predictions tabs.
@@ -75,6 +76,11 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
     )
   }
 
+  // Per-match kit colours from FIFA document, fallback to team defaults
+  const matchKits = getMatchKits(match.home_team, match.away_team)
+  const homeKit = matchKits?.home ?? [homeTeam.kit_home ?? '#cccccc']
+  const awayKit = matchKits?.away ?? [awayTeam.kit_home ?? '#cccccc']
+
   return (
     <div className="card mb-2 overflow-hidden">
       <div
@@ -85,7 +91,7 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
         <div className="flex items-center gap-2 flex-1 justify-end">
           <span className="text-white font-semibold text-sm sm:text-base text-right">{homeTeam.name || match.home_team}</span>
           <FlagIcon flagCode={homeTeam.flag_code} size={18} />
-          <KitIcon color={homeTeam.kit_home} size={26} />
+          <KitIcon colours={homeKit} size={26} />
         </div>
 
         {/* Centre: score inputs (predictions tab) OR score/time (schedule tab) */}
@@ -105,7 +111,7 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
 
         {/* Away team */}
         <div className="flex items-center gap-2 flex-1 justify-start">
-          <KitIcon color={awayTeam.kit_home} size={26} />
+          <KitIcon colours={awayKit} size={26} />
           <FlagIcon flagCode={awayTeam.flag_code} size={18} />
           <span className="text-white font-semibold text-sm sm:text-base">{awayTeam.name || match.away_team}</span>
         </div>
