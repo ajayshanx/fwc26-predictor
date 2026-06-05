@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-navy-900 text-white font-sans;
+    min-height: 100vh;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-navy-700 rounded-xl border border-navy-500;
+  }
+
+  .tab-btn {
+    @apply px-4 py-3 text-sm font-semibold tracking-wide uppercase text-slate-400
+           hover:text-white transition-colors duration-150 border-b-2 border-transparent
+           whitespace-nowrap;
+  }
+
+  .tab-btn.active {
+    @apply text-gold border-gold;
+  }
+
+  .input-score {
+    @apply w-12 h-10 text-center text-xl font-bold rounded-lg
+           bg-navy-600 border border-navy-400 text-white
+           focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-navy-400 rounded-full; }
+
+/* Score input pulse during live match */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.live-dot {
+  animation: live-pulse 1.5s ease-in-out infinite;
+}

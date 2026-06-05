@@ -1,0 +1,78 @@
+/**
+ * Calculate points for a single prediction against a completed match result.
+ * Points: Exact score = 5 | Correct result = 3 | Participated = 1 | No prediction = 0
+ */
+export function calcPoints(prediction, match) {
+  if (!prediction) return 0
+  if (match.status !== 'completed') return null  // pending
+
+  const { home_score: ph, away_score: pa } = prediction
+  const { home_score: mh, away_score: ma } = match
+
+  if (ph === mh && pa === ma) return 5
+  if (Math.sign(ph - pa) === Math.sign(mh - ma)) return 3
+  return 1
+}
+
+/**
+ * Determine result colour class for a completed match row.
+ * White  = no prediction
+ * Gold   = correct result, wrong score
+ * Red    = wrong result
+ * Green  = exact score
+ */
+export function resultColour(prediction, match) {
+  if (match.status !== 'completed') return ''
+  if (!prediction) return 'text-white'
+
+  const pts = calcPoints(prediction, match)
+  if (pts === 5) return 'text-green-400'
+  if (pts === 3) return 'text-gold'
+  return 'text-red-400'
+}
+
+/**
+ * Is this match still open for predictions? (>1 hour before kickoff)
+ */
+export function isPredictionOpen(match) {
+  if (match.status !== 'scheduled') return false
+  const kickoff = new Date(match.kickoff_utc)
+  const cutoff  = new Date(kickoff.getTime() - 60 * 60 * 1000)
+  return new Date() < cutoff
+}
+
+/**
+ * Aggregate total points, predictions count, accuracy, precision for a user.
+ */
+export function aggregateStats(predictions, matches) {
+  let totalPoints   = 0
+  let predicted     = 0
+  let correctResult = 0
+  let exactScore    = 0
+  let completed     = 0
+
+  matches.forEach(m => {
+    const pred = predictions.find(p => p.match_id === m.id)
+    if (pred) predicted++
+
+    if (m.status === 'completed') {
+      completed++
+      const pts = calcPoints(pred, m)
+      if (pts !== null && pts > 0) {
+        totalPoints += pts
+        if (pts >= 3) correctResult++
+        if (pts === 5) exactScore++
+      }
+    }
+  })
+
+  const completedPredicted = predictions.filter(p => {
+    const m = matches.find(x => x.id === p.match_id)
+    return m && m.status === 'completed'
+  }).length
+
+  const accuracy  = completedPredicted > 0 ? Math.round((correctResult / completedPredicted) * 100) : null
+  const precision = completedPredicted > 0 ? Math.round((exactScore    / completedPredicted) * 100) : null
+
+  return { totalPoints, predicted, total: matches.length, accuracy, precision }
+}
