@@ -9,6 +9,7 @@ export default function SharePlayTab() {
   const [creating,   setCreating]     = useState(false)
   const [error,      setError]        = useState('')
   const [copiedId,   setCopiedId]     = useState(null)
+  const [membersOpenId, setMembersOpenId] = useState(null)
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -129,63 +130,80 @@ export default function SharePlayTab() {
               {groups.map(group => {
                 const isAdmin    = group.admin_user_id === user?.id
                 const isSelected = activeGroup?.id === group.id
+                const isOpen     = membersOpenId === group.id
                 return (
-                  <tr
-                    key={group.id}
-                    className={`border-b border-navy-600 last:border-0
-                      ${isSelected ? 'bg-gold/5' : 'hover:bg-navy-700/30'}
-                      transition-colors cursor-pointer`}
-                    onClick={() => setActiveGroup(group)}
-                  >
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />}
-                        <span className={`font-semibold ${isSelected ? 'text-gold' : 'text-white'}`}>
-                          {group.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-300">
-                      <GroupMemberCount groupId={group.id} />
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {isAdmin
-                        ? <span className="badge bg-gold/20 text-gold">Admin</span>
-                        : <span className="text-slate-600">—</span>}
-                    </td>
-                    <td className="py-3 px-4 text-right" onClick={e => e.stopPropagation()}>
-                      {isAdmin ? (
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => copyLink(group)}
-                            title="Copy invite link"
-                            className="text-xs bg-navy-600 hover:bg-navy-500 border border-navy-400
-                                       px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-colors"
-                          >
-                            {copiedId === group.id ? '✓ Copied' : '🔗 Link'}
-                          </button>
-                          <button
-                            onClick={() => shareViaWhatsApp(group)}
-                            title="Share via WhatsApp"
-                            className="text-xs bg-green-900/40 hover:bg-green-900/60 border border-green-800
-                                       px-3 py-1.5 rounded-lg text-green-400 hover:text-green-300 transition-colors"
-                          >
-                            WhatsApp
-                          </button>
-                          <button
-                            onClick={() => shareViaEmail(group)}
-                            title="Share via Email"
-                            className="text-xs bg-navy-600 hover:bg-navy-500 border border-navy-400
-                                       px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-colors"
-                          >
-                            Email
-                          </button>
+                  <>
+                    <tr
+                      key={group.id}
+                      className={`border-b border-navy-600 last:border-0
+                        ${isSelected ? 'bg-gold/5' : 'hover:bg-navy-700/30'}
+                        transition-colors cursor-pointer`}
+                      onClick={() => setActiveGroup(group)}
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />}
+                          <span className={`font-semibold ${isSelected ? 'text-gold' : 'text-white'}`}>
+                            {group.name}
+                          </span>
                         </div>
-                      ) : (
-                        <span className="text-slate-600 text-xs">Members only</span>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setMembersOpenId(isOpen ? null : group.id)}
+                          title="View members"
+                          className={`text-slate-300 hover:text-gold underline decoration-dotted
+                                      underline-offset-4 transition-colors ${isOpen ? 'text-gold' : ''}`}
+                        >
+                          <GroupMemberCount groupId={group.id} />
+                        </button>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {isAdmin
+                          ? <span className="badge bg-gold/20 text-gold">Admin</span>
+                          : <span className="text-slate-600">—</span>}
+                      </td>
+                      <td className="py-3 px-4 text-right" onClick={e => e.stopPropagation()}>
+                        {isAdmin ? (
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => copyLink(group)}
+                              title="Copy invite link"
+                              className="text-xs bg-navy-600 hover:bg-navy-500 border border-navy-400
+                                         px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-colors"
+                            >
+                              {copiedId === group.id ? '✓ Copied' : '🔗 Link'}
+                            </button>
+                            <button
+                              onClick={() => shareViaWhatsApp(group)}
+                              title="Share via WhatsApp"
+                              className="text-xs bg-green-900/40 hover:bg-green-900/60 border border-green-800
+                                         px-3 py-1.5 rounded-lg text-green-400 hover:text-green-300 transition-colors"
+                            >
+                              WhatsApp
+                            </button>
+                            <button
+                              onClick={() => shareViaEmail(group)}
+                              title="Share via Email"
+                              className="text-xs bg-navy-600 hover:bg-navy-500 border border-navy-400
+                                         px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition-colors"
+                            >
+                              Email
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 text-xs">Members only</span>
+                        )}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr key={`${group.id}-members`} className="border-b border-navy-600 last:border-0 bg-navy-800/40">
+                        <td colSpan={4} className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <GroupMemberList groupId={group.id} adminUserId={group.admin_user_id} />
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 )
               })}
             </tbody>
@@ -213,5 +231,50 @@ function GroupMemberCount({ groupId }) {
       .then(({ count: c }) => setCount(c ?? '?'))
   }, [groupId])
 
-  return <span>{count}</span>
+  return <span>{count} {count === 1 ? 'player' : 'players'} ▾</span>
+}
+
+// Fetches and displays the list of members in a group (name, nickname, admin badge)
+function GroupMemberList({ groupId, adminUserId }) {
+  const [members, setMembers] = useState(null)
+  const [error,   setError]   = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setMembers(null)
+    setError('')
+
+    supabase
+      .from('group_members')
+      .select('user_id, joined_at, users ( id, name, nickname, email )')
+      .eq('group_id', groupId)
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        if (err) { setError('Could not load members.'); return }
+        setMembers(data || [])
+      })
+
+    return () => { cancelled = true }
+  }, [groupId])
+
+  if (error) return <p className="text-red-400 text-xs">{error}</p>
+  if (!members) return <p className="text-slate-500 text-xs">Loading members…</p>
+  if (!members.length) return <p className="text-slate-500 text-xs">No members yet.</p>
+
+  return (
+    <ul className="space-y-1.5">
+      {members.map(({ user_id, users: u }) => (
+        <li key={user_id} className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-white font-medium">{u?.name || u?.email || 'Unknown'}</span>
+            {u?.nickname && <span className="text-slate-500 text-xs">"{u.nickname}"</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            {u?.email && <span className="text-slate-500 text-xs">{u.email}</span>}
+            {user_id === adminUserId && <span className="badge bg-gold/20 text-gold text-xs">Admin</span>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
 }
