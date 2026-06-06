@@ -49,7 +49,10 @@ create table if not exists public.teams (
   flag_code       text,                 -- ISO 3166-1 alpha-2 for flagcdn.com
   kit_home        text default '#ffffff',
   kit_away        text default '#000000',
-  kit_home_alt    text default '#cccccc'
+  kit_home_alt    text default '#cccccc',
+  -- Qualifying campaign record, e.g. {"played":6,"won":5,"drawn":0,"lost":1,"gd":13,"pts":15}
+  -- null for tournament hosts (MEX/CAN/USA), who qualified automatically.
+  qualifying_record jsonb
 );
 
 -- ============================================================

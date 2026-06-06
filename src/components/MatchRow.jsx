@@ -186,13 +186,36 @@ function ExpandedPanel({ match, homeTeam, awayTeam }) {
   )
 }
 
+// Renders a team's qualifying campaign record as "P - W - D - L - GD - Pts",
+// or a host badge for tournament hosts (who qualify automatically).
+function QualifyingRecord({ team }) {
+  const r = team?.qualifying_record
+
+  if (!r) {
+    return (
+      <p className="text-slate-400 text-xs italic">
+        Qualified automatically as tournament host — no qualifying campaign
+      </p>
+    )
+  }
+
+  const gdStr = r.gd > 0 ? `+${r.gd}` : `${r.gd}`
+
+  return (
+    <p className="text-white text-sm font-mono">
+      {r.played} - {r.won} - {r.drawn} - {r.lost} - {gdStr} - {r.pts}
+      <span className="text-slate-500 text-xs font-sans ml-2">(P-W-D-L-GD-Pts)</span>
+    </p>
+  )
+}
+
 function PreMatchDetail({ match, homeTeam, awayTeam }) {
   return (
     <div className="grid grid-cols-2 gap-6 text-sm text-slate-400">
       <div>
         <p className="text-white font-semibold mb-2">{homeTeam.name}</p>
         <p className="text-xs text-slate-500 mb-1">Qualifying record</p>
-        <p className="text-slate-400 text-xs italic">Data loading — connect football-data.org API</p>
+        <QualifyingRecord team={homeTeam} />
         {homeTeam.fifa_ranking && (
           <p className="mt-2 text-xs">FIFA Ranking: <span className="text-white">#{homeTeam.fifa_ranking}</span></p>
         )}
@@ -200,7 +223,7 @@ function PreMatchDetail({ match, homeTeam, awayTeam }) {
       <div>
         <p className="text-white font-semibold mb-2">{awayTeam.name}</p>
         <p className="text-xs text-slate-500 mb-1">Qualifying record</p>
-        <p className="text-slate-400 text-xs italic">Data loading — connect football-data.org API</p>
+        <QualifyingRecord team={awayTeam} />
         {awayTeam.fifa_ranking && (
           <p className="mt-2 text-xs">FIFA Ranking: <span className="text-white">#{awayTeam.fifa_ranking}</span></p>
         )}
