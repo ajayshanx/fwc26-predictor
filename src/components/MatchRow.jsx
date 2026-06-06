@@ -186,49 +186,64 @@ function ExpandedPanel({ match, homeTeam, awayTeam }) {
   )
 }
 
-// Renders a team's qualifying campaign record as "P - W - D - L - GD - Pts",
-// or a host badge for tournament hosts (who qualify automatically).
+// Renders a team's qualifying record as a compact stat grid (headers + values).
 function QualifyingRecord({ team }) {
   const r = team?.qualifying_record
 
   if (!r) {
     return (
-      <p className="text-slate-400 text-xs italic">
-        Qualified automatically as tournament host — no qualifying campaign
+      <p className="text-slate-400 text-xs italic leading-relaxed">
+        Qualified automatically as host — no qualifying campaign
       </p>
     )
   }
 
   const gdStr = r.gd > 0 ? `+${r.gd}` : `${r.gd}`
+  const stats = [
+    { label: 'P',   value: r.played },
+    { label: 'W',   value: r.won    },
+    { label: 'D',   value: r.drawn  },
+    { label: 'L',   value: r.lost   },
+    { label: 'GD',  value: gdStr    },
+    { label: 'Pts', value: r.pts    },
+  ]
 
   return (
-    <p className="text-white text-sm font-mono">
-      {r.played} - {r.won} - {r.drawn} - {r.lost} - {gdStr} - {r.pts}
-      <span className="text-slate-500 text-xs font-sans ml-2">(P-W-D-L-GD-Pts)</span>
-    </p>
+    <div className="flex gap-3">
+      {stats.map(({ label, value }) => (
+        <div key={label} className="text-center">
+          <p className="text-slate-500 text-[10px] uppercase leading-none">{label}</p>
+          <p className="text-white text-sm font-semibold font-mono mt-0.5">{value}</p>
+        </div>
+      ))}
+    </div>
   )
 }
 
 function PreMatchDetail({ match, homeTeam, awayTeam }) {
   return (
-    <div className="grid grid-cols-2 gap-6 text-sm text-slate-400">
-      <div>
-        <p className="text-white font-semibold mb-2">{homeTeam.name}</p>
-        <p className="text-xs text-slate-500 mb-1">Qualifying record</p>
-        <QualifyingRecord team={homeTeam} />
-        {homeTeam.fifa_ranking && (
-          <p className="mt-2 text-xs">FIFA Ranking: <span className="text-white">#{homeTeam.fifa_ranking}</span></p>
-        )}
+    <div className="space-y-4 text-sm text-slate-400">
+      {/* Teams: side-by-side on sm+, stacked on mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <p className="text-white font-semibold mb-1">{homeTeam.name}</p>
+          <p className="text-xs text-slate-500 mb-2">Qualifying record</p>
+          <QualifyingRecord team={homeTeam} />
+          {homeTeam.fifa_ranking && (
+            <p className="mt-2 text-xs">FIFA Ranking: <span className="text-white">#{homeTeam.fifa_ranking}</span></p>
+          )}
+        </div>
+        <div className="border-t border-navy-600 pt-3 sm:border-0 sm:pt-0">
+          <p className="text-white font-semibold mb-1">{awayTeam.name}</p>
+          <p className="text-xs text-slate-500 mb-2">Qualifying record</p>
+          <QualifyingRecord team={awayTeam} />
+          {awayTeam.fifa_ranking && (
+            <p className="mt-2 text-xs">FIFA Ranking: <span className="text-white">#{awayTeam.fifa_ranking}</span></p>
+          )}
+        </div>
       </div>
-      <div>
-        <p className="text-white font-semibold mb-2">{awayTeam.name}</p>
-        <p className="text-xs text-slate-500 mb-1">Qualifying record</p>
-        <QualifyingRecord team={awayTeam} />
-        {awayTeam.fifa_ranking && (
-          <p className="mt-2 text-xs">FIFA Ranking: <span className="text-white">#{awayTeam.fifa_ranking}</span></p>
-        )}
-      </div>
-      <div className="col-span-2">
+      {/* Venue */}
+      <div className="border-t border-navy-600 pt-3">
         <p className="text-xs text-slate-500">Venue</p>
         <p className="text-white text-sm">{match.venue_stadium}, {match.venue_city}, {match.venue_country}</p>
       </div>
