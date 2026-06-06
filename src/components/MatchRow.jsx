@@ -47,7 +47,7 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
     if (match.status === 'live') {
       return (
         <div className="text-center">
-          <span className={`font-bold text-xl ${colour || 'text-white'}`}>
+          <span className={`font-bold text-base sm:text-xl ${colour || 'text-white'}`}>
             {match.home_score} – {match.away_score}
           </span>
           <div className="flex items-center justify-center gap-1 mt-0.5">
@@ -59,19 +59,19 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
     }
     if (match.status === 'completed') {
       return (
-        <span className={`font-bold text-xl ${colour || 'text-white'}`}>
+        <span className={`font-bold text-base sm:text-xl ${colour || 'text-white'}`}>
           {match.home_score} – {match.away_score}
         </span>
       )
     }
     // Scheduled
     return (
-      <div className="text-center">
-        <div className="text-white font-semibold text-sm">{timeStr}</div>
-        <div className="text-slate-400 text-xs mt-0.5">
-          Group {match.group_letter} · MD{match.matchday}
+      <div className="text-center leading-tight">
+        <div className="text-white font-semibold text-xs sm:text-sm">{timeStr}</div>
+        <div className="text-slate-400 text-[10px] sm:text-xs mt-0.5 truncate">
+          Grp {match.group_letter} · MD{match.matchday}
         </div>
-        <div className="text-slate-500 text-xs">{match.venue_city}</div>
+        <div className="text-slate-500 text-[10px] sm:text-xs truncate">{match.venue_city}</div>
       </div>
     )
   }
@@ -84,18 +84,18 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
   return (
     <div className="card mb-2 overflow-hidden">
       <div
-        className="flex items-center px-4 py-3 gap-2 cursor-pointer select-none hover:bg-navy-600/30 transition-colors"
+        className="flex items-center px-2 sm:px-4 py-3 gap-1 sm:gap-2 cursor-pointer select-none hover:bg-navy-600/30 transition-colors"
         onClick={() => setExpanded(e => !e)}
       >
         {/* Home team */}
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          <span className="text-white font-semibold text-sm sm:text-base text-right">{homeTeam.name || match.home_team}</span>
-          <FlagIcon flagCode={homeTeam.flag_code} size={18} />
-          <KitIcon colours={homeKit} size={26} />
+        <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-end">
+          <span className="text-white font-semibold text-xs sm:text-base text-right truncate">{homeTeam.name || match.home_team}</span>
+          <FlagIcon flagCode={homeTeam.flag_code} size={16} className="flex-shrink-0" />
+          <KitIcon colours={homeKit} size={22} className="flex-shrink-0 hidden sm:inline-block" />
         </div>
 
         {/* Centre: score inputs (predictions tab) OR score/time (schedule tab) */}
-        <div className="flex items-center justify-center w-44 flex-shrink-0" onClick={e => e.stopPropagation()}>
+        <div className={`flex items-center justify-center flex-shrink-0 ${showPredInput ? 'w-28 sm:w-44' : 'w-20 sm:w-44'}`} onClick={e => e.stopPropagation()}>
           {showPredInput ? (
             <PredInputs
               homeVal={inputHome} awayVal={inputAway}
@@ -110,14 +110,14 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
         </div>
 
         {/* Away team */}
-        <div className="flex items-center gap-2 flex-1 justify-start">
-          <KitIcon colours={awayKit} size={26} />
-          <FlagIcon flagCode={awayTeam.flag_code} size={18} />
-          <span className="text-white font-semibold text-sm sm:text-base">{awayTeam.name || match.away_team}</span>
+        <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-start">
+          <KitIcon colours={awayKit} size={22} className="flex-shrink-0 hidden sm:inline-block" />
+          <FlagIcon flagCode={awayTeam.flag_code} size={16} className="flex-shrink-0" />
+          <span className="text-white font-semibold text-xs sm:text-base truncate">{awayTeam.name || match.away_team}</span>
         </div>
 
         {/* Expand chevron */}
-        <span className={`text-slate-500 text-xs ml-2 transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
+        <span className={`text-slate-500 text-xs ml-1 sm:ml-2 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
       </div>
 
       {/* Expanded panel */}
@@ -132,21 +132,21 @@ function PredInputs({ homeVal, awayVal, setHome, setAway, onBlur, editable, savi
   const colour = resultColour(prediction, match)
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       {/* Prediction inputs */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <input
           type="number" min="0" max="99"
           value={homeVal} onChange={e => setHome(e.target.value)}
           onBlur={onBlur} disabled={!editable}
-          className="input-score"
+          className="input-score !w-9 !h-9 !text-base sm:!w-12 sm:!h-10 sm:!text-xl"
         />
-        <span className="text-slate-400 font-bold">–</span>
+        <span className="text-slate-400 font-bold text-sm sm:text-base">–</span>
         <input
           type="number" min="0" max="99"
           value={awayVal} onChange={e => setAway(e.target.value)}
           onBlur={onBlur} disabled={!editable}
-          className="input-score"
+          className="input-score !w-9 !h-9 !text-base sm:!w-12 sm:!h-10 sm:!text-xl"
         />
       </div>
 
@@ -154,14 +154,14 @@ function PredInputs({ homeVal, awayVal, setHome, setAway, onBlur, editable, savi
 
       {/* Actual result / live score */}
       {showActual && (
-        <div className="ml-2 text-right w-16">
+        <div className="ml-1 sm:ml-2 text-right w-12 sm:w-16">
           {match.status === 'completed' && (
-            <span className={`font-bold text-sm ${colour}`}>
+            <span className={`font-bold text-xs sm:text-sm ${colour}`}>
               {match.home_score}–{match.away_score}
             </span>
           )}
           {match.status === 'live' && (
-            <span className="text-red-400 text-sm font-bold">
+            <span className="text-red-400 text-xs sm:text-sm font-bold">
               {match.home_score}–{match.away_score}
               <span className="text-xs ml-1">{match.match_minute}'</span>
             </span>
