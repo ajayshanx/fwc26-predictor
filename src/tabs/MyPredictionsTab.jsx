@@ -51,7 +51,7 @@ export default function MyPredictionsTab() {
       </div>
 
       {/* Scoring reminder */}
-      <div className="flex gap-4 mb-6 text-xs text-slate-500">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-6 text-xs text-slate-500">
         <span><span className="text-slate-300 font-semibold">1 pt</span> — any prediction</span>
         <span><span className="text-gold font-semibold">3 pts</span> — correct result</span>
         <span><span className="text-green-400 font-semibold">5 pts</span> — exact score</span>

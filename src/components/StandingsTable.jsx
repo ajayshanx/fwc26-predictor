@@ -48,13 +48,13 @@ export default function StandingsTable({ groupLetter, getScore, withConduct = fa
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm" style={{ minWidth: withConduct ? 480 : 420 }}>
         <thead>
           <tr className="text-slate-400 text-xs uppercase tracking-wide">
-            <th className="text-left py-2 px-3 w-6">#</th>
-            <th className="text-left py-2 px-3">Team</th>
+            <th className="text-left py-2 px-2 w-5">#</th>
+            <th className="text-left py-2 px-2">Team</th>
             {cols.map(c => (
-              <th key={c} className={`py-2 px-2 text-right ${c === 'PTS' ? 'text-gold' : ''}`}>{c}</th>
+              <th key={c} className={`py-2 px-1.5 text-right ${c === 'PTS' ? 'text-gold' : ''}`}>{c}</th>
             ))}
           </tr>
         </thead>
@@ -66,12 +66,12 @@ export default function StandingsTable({ groupLetter, getScore, withConduct = fa
                 ${i < 2 ? 'bg-navy-600/30' : 'hover:bg-navy-700/30'}
                 transition-colors`}
             >
-              <td className="py-2.5 px-3 text-slate-500 text-xs">{i + 1}</td>
-              <td className="py-2.5 px-3">
+              <td className="py-2 px-2 text-slate-500 text-xs">{i + 1}</td>
+              <td className="py-2 px-2">
                 <TeamCell code={row.code} />
               </td>
               {cols.map(c => (
-                <td key={c} className={`py-2.5 px-2 text-right
+                <td key={c} className={`py-2 px-1.5 text-right
                   ${c === 'PTS' ? 'text-gold font-bold text-base' : 'text-slate-300'}`}>
                   {c === 'GD' && row[c] > 0 ? `+${row[c]}` : row[c]}
                 </td>
@@ -89,10 +89,10 @@ function TeamCell({ code }) {
   const { teamsMap } = useApp()
   const team = teamsMap[code] || {}
   return (
-    <div className="flex items-center gap-2">
-      <FlagIcon flagCode={team.flag_code} size={16} />
-      <KitIcon  colours={[team.kit_home ?? '#cccccc']} size={18} />
-      <span className="text-white">{team.name || code}</span>
+    <div className="flex items-center gap-1.5 min-w-0">
+      <FlagIcon flagCode={team.flag_code} size={14} className="flex-shrink-0" />
+      <KitIcon  colours={[team.kit_home ?? '#cccccc']} size={16} className="flex-shrink-0 hidden sm:inline-block" />
+      <span className="text-white truncate text-xs sm:text-sm">{team.name || code}</span>
     </div>
   )
 }

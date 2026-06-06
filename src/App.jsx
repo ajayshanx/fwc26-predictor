@@ -12,13 +12,13 @@ import PointsTableTab      from './tabs/PointsTableTab'
 
 // ── Tab definition ──────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'rules',      label: 'Rules'              },
-  { id: 'schedule',   label: 'Schedule'           },
-  { id: 'share',      label: 'Share & Play'       },
-  { id: 'predict',    label: 'My Predictions'     },
-  { id: 'predstand',  label: 'Predicted Standings'},
-  { id: 'standings',  label: 'Standings'          },
-  { id: 'points',     label: 'Points Table'       },
+  { id: 'rules',      label: 'Rules'        },
+  { id: 'schedule',   label: 'Schedule'     },
+  { id: 'share',      label: 'Groups'       },
+  { id: 'predict',    label: 'Predictions'  },
+  { id: 'predstand',  label: 'My Standings' },
+  { id: 'standings',  label: 'Standings'    },
+  { id: 'points',     label: 'Points'       },
 ]
 
 // Adds a user to the group identified by an invite token (idempotent — upsert).

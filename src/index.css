@@ -28,9 +28,9 @@
   }
 
   .tab-btn {
-    @apply px-4 py-3 text-sm font-semibold tracking-wide uppercase text-slate-400
-           hover:text-white transition-colors duration-150 border-b-2 border-transparent
-           whitespace-nowrap;
+    @apply px-2 sm:px-4 py-2.5 sm:py-3 text-[11px] sm:text-sm font-semibold tracking-wide
+           uppercase text-slate-400 hover:text-white transition-colors duration-150
+           border-b-2 border-transparent whitespace-nowrap;
   }
 
   .tab-btn.active {
