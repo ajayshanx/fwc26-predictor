@@ -21,9 +21,21 @@ const TABS = [
   { id: 'points',     label: 'Points Table'       },
 ]
 
+// Adds a user to the group identified by an invite token (idempotent — upsert).
+async function joinGroupByToken(userId, token) {
+  const { data: group } = await supabase.from('groups').select('id').eq('invite_token', token).single()
+  if (group) {
+    await supabase.from('group_members').upsert({ group_id: group.id, user_id: userId }, { onConflict: 'group_id,user_id' })
+    // Clean token from URL without reload
+    window.history.replaceState({}, '', window.location.pathname)
+    return true
+  }
+  return false
+}
+
 // ── Inner app (needs context) ───────────────────────────────────────────────
 function InnerApp() {
-  const { user, setUser, bootstrap, loading } = useApp()
+  const { user, setUser, bootstrap, loading, refreshGroups } = useApp()
   const [activeTab, setActiveTab] = useState('rules')
 
   // Check for group invite token in URL
@@ -34,9 +46,19 @@ function InnerApp() {
     const stored = localStorage.getItem('fwc26_user_id')
     if (stored) {
       supabase.from('users').select('*').eq('id', stored).single()
-        .then(({ data }) => {
-          if (data) { setUser(data); bootstrap(data.id) }
-          else      { localStorage.removeItem('fwc26_user_id') }
+        .then(async ({ data }) => {
+          if (data) {
+            // Returning user clicking an invite link — join the group too,
+            // not just first-time signups (previously only handled in AuthFlow)
+            if (joinToken) {
+              const joined = await joinGroupByToken(data.id, joinToken)
+              if (joined) await refreshGroups()
+            }
+            setUser(data)
+            bootstrap(data.id)
+          } else {
+            localStorage.removeItem('fwc26_user_id')
+          }
         })
     }
   }, [])
@@ -109,15 +131,6 @@ function AuthFlow({ joinToken, onAuth }) {
     if (joinToken) await joinGroupByToken(data.id, joinToken)
     onAuth(data)
     setBusy(false)
-  }
-
-  async function joinGroupByToken(userId, token) {
-    const { data: group } = await supabase.from('groups').select('id').eq('invite_token', token).single()
-    if (group) {
-      await supabase.from('group_members').upsert({ group_id: group.id, user_id: userId }, { onConflict: 'group_id,user_id' })
-      // Clean token from URL without reload
-      window.history.replaceState({}, '', window.location.pathname)
-    }
   }
 
   return (
