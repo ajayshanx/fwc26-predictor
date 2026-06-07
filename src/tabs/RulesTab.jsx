@@ -150,30 +150,36 @@ export default function RulesTab() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 py-4">
 
-      {/* Translate control */}
-      <div className="card p-4 flex flex-wrap items-center gap-3">
-        <span className="text-slate-300 text-sm font-semibold whitespace-nowrap">🌐 Translate this page</span>
-        <select
-          value={targetLang}
-          onChange={e => setTargetLang(e.target.value)}
-          className="bg-navy-600 border border-navy-400 rounded-lg px-3 py-2 text-sm
-                     text-white focus:outline-none focus:border-gold min-w-0 flex-1 sm:flex-none"
-        >
-          <option value="">Select a language…</option>
-          {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-        </select>
-        <button
-          onClick={handleTranslate}
-          disabled={!targetLang || translating}
-          className="bg-gold hover:bg-gold-light text-navy-900 font-bold px-4 py-2
-                     rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-nowrap"
-        >
-          {translating ? `Translating… ${progress}/${ALL_STRINGS.length}` : 'Translate'}
-        </button>
+      {/* Translate control — stacked on mobile, single row from sm+ */}
+      <div className="card p-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="text-slate-300 text-sm font-semibold">🌐 Translate this page</span>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-1 sm:max-w-md">
+          <select
+            value={targetLang}
+            onChange={e => setTargetLang(e.target.value)}
+            className="bg-navy-600 border border-navy-400 rounded-lg px-3 py-2 text-sm
+                       text-white focus:outline-none focus:border-gold w-full sm:flex-1 min-w-0"
+          >
+            <option value="">Select a language…</option>
+            {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </select>
+          <button
+            onClick={handleTranslate}
+            disabled={!targetLang || translating}
+            className="bg-gold hover:bg-gold-light text-navy-900 font-bold px-4 py-2
+                       rounded-lg text-sm transition-colors disabled:opacity-50 whitespace-nowrap
+                       w-full sm:w-auto"
+          >
+            {translating ? `Translating… ${progress}/${ALL_STRINGS.length}` : 'Translate'}
+          </button>
+        </div>
+
         {showingTranslation && (
           <button
             onClick={() => setActiveLang(null)}
-            className="text-sm text-slate-400 hover:text-white underline decoration-dotted underline-offset-4 transition-colors whitespace-nowrap"
+            className="text-sm text-slate-400 hover:text-white underline decoration-dotted
+                       underline-offset-4 transition-colors text-left sm:text-right sm:ml-auto"
           >
             Show original (English)
           </button>
