@@ -140,6 +140,16 @@ end;
 $$;
 
 -- ============================================================
+-- FEEDBACK
+-- ============================================================
+create table if not exists public.feedback (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references public.users(id) on delete set null,
+  message     text not null,
+  created_at  timestamptz not null default now()
+);
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 alter table public.users           enable row level security;
@@ -148,6 +158,7 @@ alter table public.group_members   enable row level security;
 alter table public.teams           enable row level security;
 alter table public.matches         enable row level security;
 alter table public.predictions     enable row level security;
+alter table public.feedback        enable row level security;
 
 -- Public read on teams and matches
 create policy "Teams are public" on public.teams for select using (true);
@@ -170,6 +181,11 @@ create policy "Anyone can join group" on public.group_members for insert with ch
 create policy "Predictions are public" on public.predictions for select using (true);
 create policy "Anyone can insert prediction" on public.predictions for insert with check (true);
 create policy "Anyone can update prediction" on public.predictions for update using (true);
+
+-- Feedback: anyone can submit; intentionally no select policy so messages
+-- stay private (only visible via the Supabase dashboard, which uses the
+-- service role and bypasses RLS)
+create policy "Anyone can submit feedback" on public.feedback for insert with check (true);
 
 -- ============================================================
 -- REALTIME: enable for live score and prediction updates

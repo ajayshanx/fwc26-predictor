@@ -9,6 +9,7 @@ import MyPredictionsTab    from './tabs/MyPredictionsTab'
 import PredictedStandingsTab from './tabs/PredictedStandingsTab'
 import StandingsTab        from './tabs/StandingsTab'
 import PointsTableTab      from './tabs/PointsTableTab'
+import FeedbackTab         from './tabs/FeedbackTab'
 
 // ── Tab definition ──────────────────────────────────────────────────────────
 const TABS = [
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'predstand',  label: 'My Standings' },
   { id: 'standings',  label: 'Standings'    },
   { id: 'points',     label: 'Points'       },
+  { id: 'feedback',   label: 'Feedback'     },
 ]
 
 // Adds a user to the group identified by an invite token (idempotent — upsert).
@@ -86,6 +88,7 @@ function InnerApp() {
         {activeTab === 'predstand' && <PredictedStandingsTab />}
         {activeTab === 'standings' && <StandingsTab />}
         {activeTab === 'points'    && <PointsTableTab />}
+        {activeTab === 'feedback'  && <FeedbackTab />}
       </main>
     </div>
   )
