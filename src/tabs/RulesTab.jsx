@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import bannerUrl from '../assets/fwc-banner.svg'
 
 // ── Languages offered for translation ───────────────────────────────────────
 const LANGUAGES = [
@@ -149,6 +150,14 @@ export default function RulesTab() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 py-4">
+
+      {/* Banner image */}
+      <img
+        src={bannerUrl}
+        alt="FIFA World Cup 2026 Match Predictor"
+        className="w-full rounded-xl"
+        style={{ display: 'block' }}
+      />
 
       {/* Translate control — stacked on mobile, single row from sm+ */}
       <div className="card p-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
