@@ -46,7 +46,7 @@ const SECTIONS = [
     paragraphs: [
       [t('Follow the World Cup, correctly predict match results and scores, and win points. Challenge friends and family and see who comes out on top.')],
       [
-        t('Navigate to '), name('My Predictions'),
+        t('Navigate to '), name('Predictions'),
         t(' and enter your predicted score for any match. You can predict the whole tournament in one go or match by match — completely up to you. Just make sure your prediction is in at least one hour before kick-off.'),
       ],
       [t('You can keep changing your predictions right up to the one-hour deadline.')],
@@ -70,9 +70,9 @@ const SECTIONS = [
     title: 'Player groups',
     paragraphs: [
       [
-        t('Head to '), name('Share & Play'),
+        t('Head to '), name('Groups'),
         t(' to create a group and invite friends. Use the group selector in the header to switch between groups if you belong to multiple. The '),
-        name('Points Table'),
+        name('Points'),
         t(' and leaderboard show results for the currently selected group.'),
       ],
     ],
@@ -283,7 +283,7 @@ function OriginalContent() {
           Challenge friends and family and see who comes out on top.
         </p>
         <p className="mt-3">
-          Navigate to <span className="text-gold font-semibold">My Predictions</span> and enter
+          Navigate to <span className="text-gold font-semibold">Predictions</span> and enter
           your predicted score for any match. You can predict the whole tournament in one go or
           match by match — completely up to you. Just make sure your prediction is in at least
           <span className="text-gold font-semibold"> one hour before kick-off</span>.
@@ -322,9 +322,9 @@ function OriginalContent() {
 
       <Section title="Player groups">
         <p>
-          Head to <span className="text-gold font-semibold">Share &amp; Play</span> to create a group and
+          Head to <span className="text-gold font-semibold">Groups</span> to create a group and
           invite friends. Use the group selector in the header to switch between groups if you belong to
-          multiple. The Points Table and leaderboard show results for the currently selected group.
+          multiple. The <span className="text-gold font-semibold">Points</span> tab and leaderboard show results for the currently selected group.
         </p>
       </Section>
 
