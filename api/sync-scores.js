@@ -48,15 +48,25 @@ export default async function handler(req, res) {
 
   try {
     // 1. Fetch all WC2026 matches from football-data.org ─────────────────────
-    const fdResponse = await fetch(
-      'https://api.football-data.org/v4/competitions/WC/matches?season=2026',
-      {
-        headers: {
-          'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
-          'Content-Type': 'application/json',
-        },
-      }
-    )
+    const fdAbort = new AbortController()
+    const fdTimeout = setTimeout(() => fdAbort.abort(), 20_000) // 20s timeout
+    let fdResponse
+    try {
+      fdResponse = await fetch(
+        'https://api.football-data.org/v4/competitions/WC/matches?season=2026',
+        {
+          signal: fdAbort.signal,
+          headers: {
+            'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+    } catch (fetchErr) {
+      clearTimeout(fdTimeout)
+      return res.status(504).json({ error: `football-data.org fetch failed: ${fetchErr.message}` })
+    }
+    clearTimeout(fdTimeout)
     if (!fdResponse.ok) {
       return res.status(502).json({
         error: `football-data.org returned ${fdResponse.status} ${fdResponse.statusText}`,
