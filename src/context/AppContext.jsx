@@ -68,9 +68,20 @@ export function AppProvider({ children }) {
       .channel('matches-realtime')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' },
         payload => {
-          setMatches(prev => prev.map(m =>
-            m.id === payload.new.id ? { ...m, ...payload.new } : m
-          ))
+          // Only merge the fields that legitimately change during a match.
+          // Avoid spreading all of payload.new — char(3) columns (home_team,
+          // away_team, group_letter) can come back truncated from the realtime
+          // WAL decoder, which corrupts team codes in state.
+          setMatches(prev => prev.map(m => {
+            if (m.id !== payload.new.id) return m
+            return {
+              ...m,
+              status:       payload.new.status,
+              home_score:   payload.new.home_score,
+              away_score:   payload.new.away_score,
+              match_minute: payload.new.match_minute,
+            }
+          }))
           // Recalculate points for completed match
           if (payload.new.status === 'completed') {
             setPredictions(prev => prev.map(p => {
