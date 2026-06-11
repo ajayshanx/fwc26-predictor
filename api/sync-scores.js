@@ -72,7 +72,8 @@ export default async function handler(req, res) {
         error: `football-data.org returned ${fdResponse.status} ${fdResponse.statusText}`,
       })
     }
-    const { matches: fdMatches } = await fdResponse.json()
+    const fdBody = await fdResponse.json()
+    const fdMatches = fdBody.matches
 
     // 2. Fetch all non-completed matches from Supabase ───────────────────────
     const { data: dbMatches, error: dbError } = await supabase
@@ -136,6 +137,8 @@ export default async function handler(req, res) {
       updated:        toUpdate.length,
       newlyScored:    newlyComplete.length,
       scoredMatchIds: newlyComplete,
+      fdMatchCount:   fdMatches?.length ?? 0,
+      fdError:        fdBody.message ?? null,
       ts:             new Date().toISOString(),
     })
 
