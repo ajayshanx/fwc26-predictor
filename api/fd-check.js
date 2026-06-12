@@ -22,18 +22,38 @@ export default async function handler(req, res) {
   const matches = body.matches ?? []
   const completed = matches.filter(m => m.status === 'FINISHED')
   const first = completed[0]
+
+  // Fetch individual match detail for the first completed match to check goals
+  let matchDetail = null
+  if (first?.id) {
+    const detailRes = await fetch(
+      `https://api.football-data.org/v4/matches/${first.id}`,
+      { headers: { 'X-Auth-Token': apiKey } }
+    )
+    if (detailRes.ok) {
+      const detailBody = await detailRes.json()
+      matchDetail = {
+        fdMatchId: first.id,
+        status:    detailBody.status,
+        goals:     detailBody.goals ?? 'FIELD_MISSING',
+        detailKeys: Object.keys(detailBody),
+      }
+    } else {
+      matchDetail = { error: detailRes.status }
+    }
+  }
+
   return res.status(200).json({
     fdStatus:       fdRes.status,
     matchCount:     matches.length,
     completedCount: completed.length,
     completed: completed.map(m => ({
+      fdId:  m.id,
       date:  m.utcDate,
       home:  m.homeTeam?.name,
       away:  m.awayTeam?.name,
       score: `${m.score?.fullTime?.home}-${m.score?.fullTime?.away}`,
-      goals: m.goals ?? 'FIELD_MISSING',
     })),
-    // Raw keys on first match so we can see what fields FD sends
-    firstMatchKeys: first ? Object.keys(first) : [],
+    firstMatchDetail: matchDetail,
   })
 }
