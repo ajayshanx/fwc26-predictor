@@ -175,15 +175,11 @@ function PredInputs({ homeVal, awayVal, setHome, setAway, onBlur, editable, savi
 }
 
 function ExpandedPanel({ match, homeTeam, awayTeam }) {
-  const isPreMatch = match.status === 'scheduled'
-
   return (
     <div className="border-t border-navy-500 px-4 py-4 bg-navy-800/50">
-      {isPreMatch ? (
-        <PreMatchDetail match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
-      ) : (
-        <LiveMatchDetail match={match} homeTeam={homeTeam} awayTeam={awayTeam} />
-      )}
+      {match.status === 'scheduled' && <PreMatchDetail match={match} homeTeam={homeTeam} awayTeam={awayTeam} />}
+      {match.status === 'live'      && <LiveMatchDetail match={match} homeTeam={homeTeam} awayTeam={awayTeam} />}
+      {match.status === 'completed' && <PostMatchDetail match={match} homeTeam={homeTeam} awayTeam={awayTeam} />}
     </div>
   )
 }
@@ -256,14 +252,49 @@ function PreMatchDetail({ match, homeTeam, awayTeam }) {
 function LiveMatchDetail({ match, homeTeam, awayTeam }) {
   return (
     <div className="text-sm text-slate-400">
-      <p className="text-xs text-slate-500 mb-2">Lineups & scorers updated via football-data.org</p>
       <div className="grid grid-cols-2 gap-4">
         <div><p className="text-white font-semibold mb-1">{homeTeam.name}</p></div>
         <div><p className="text-white font-semibold mb-1">{awayTeam.name}</p></div>
       </div>
-      <p className="text-slate-500 text-xs italic mt-2">
-        Full lineup data requires football-data.org API integration.
-      </p>
+      <div className="border-t border-navy-600 pt-3 mt-3">
+        <p className="text-xs text-slate-500">Venue</p>
+        <p className="text-white text-sm">{match.venue_stadium}, {match.venue_city}</p>
+      </div>
+    </div>
+  )
+}
+
+function PostMatchDetail({ match, homeTeam, awayTeam }) {
+  const kickoff = new Date(match.kickoff_utc)
+  const dateStr = kickoff.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  const homeName = homeTeam.name || match.home_team
+  const awayName = awayTeam.name || match.away_team
+  const homeWon  = match.home_score > match.away_score
+  const awayWon  = match.away_score > match.home_score
+  const draw     = match.home_score === match.away_score
+
+  return (
+    <div className="space-y-3 text-sm text-slate-400">
+      {/* Result summary */}
+      <div className="flex items-center justify-between">
+        <span className={`font-semibold text-sm ${homeWon ? 'text-white' : 'text-slate-400'}`}>{homeName}</span>
+        <span className="text-gold font-bold text-lg mx-3">{match.home_score} – {match.away_score}</span>
+        <span className={`font-semibold text-sm ${awayWon ? 'text-white' : 'text-slate-400'}`}>{awayName}</span>
+      </div>
+      {draw && <p className="text-center text-slate-500 text-xs -mt-1">Draw</p>}
+
+      {/* Venue & date */}
+      <div className="border-t border-navy-600 pt-3 flex flex-col sm:flex-row sm:justify-between gap-1">
+        <div>
+          <p className="text-xs text-slate-500">Venue</p>
+          <p className="text-white text-xs sm:text-sm">{match.venue_stadium}, {match.venue_city}</p>
+        </div>
+        <div className="sm:text-right">
+          <p className="text-xs text-slate-500">Played</p>
+          <p className="text-white text-xs sm:text-sm">{dateStr}</p>
+        </div>
+      </div>
     </div>
   )
 }
