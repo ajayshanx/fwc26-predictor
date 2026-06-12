@@ -36,6 +36,21 @@ const STATUS_MAP = {
   SUSPENDED:        'scheduled',
 }
 
+/** Fetch a single match detail from FD to get the goals array. */
+async function fetchFdMatchGoals(fdMatchId, apiKey) {
+  try {
+    const res = await fetch(
+      `https://api.football-data.org/v4/matches/${fdMatchId}`,
+      { headers: { 'X-Auth-Token': apiKey } }
+    )
+    if (!res.ok) return null
+    const body = await res.json()
+    return body.goals ?? null
+  } catch {
+    return null
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST')
     return res.status(405).json({ error: 'Method not allowed — use POST' })
@@ -48,7 +63,8 @@ export default async function handler(req, res) {
   if (!supabaseUrl)
     return res.status(500).json({ error: 'VITE_SUPABASE_URL is not set' })
 
-  const supabase = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_KEY)
+  const supabase  = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_KEY)
+  const apiKey    = process.env.FOOTBALL_DATA_API_KEY
 
   // 1. Fetch all WC2026 matches from football-data.org ─────────────────────
   const fdAbort    = new AbortController()
@@ -59,23 +75,19 @@ export default async function handler(req, res) {
       'https://api.football-data.org/v4/competitions/WC/matches?season=2026',
       {
         signal: fdAbort.signal,
-        headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
+        headers: { 'X-Auth-Token': apiKey },
       }
     )
   } catch (fetchErr) {
     clearTimeout(fdTimeout)
-    // Network error or timeout — return 200 so cron-job.org doesn't retry/disable
     return res.status(200).json({ skipped: true, reason: `fd_fetch_error: ${fetchErr.message}`, ts: new Date().toISOString() })
   }
   clearTimeout(fdTimeout)
 
-  if (fdResponse.status === 429) {
-    // Rate-limited — return 200 so we don't trigger an immediate retry
+  if (fdResponse.status === 429)
     return res.status(200).json({ skipped: true, reason: 'fd_rate_limited', ts: new Date().toISOString() })
-  }
-  if (!fdResponse.ok) {
+  if (!fdResponse.ok)
     return res.status(200).json({ skipped: true, reason: `fd_error_${fdResponse.status}`, ts: new Date().toISOString() })
-  }
 
   let fdBody
   try {
@@ -86,11 +98,10 @@ export default async function handler(req, res) {
   const fdMatches = fdBody.matches
 
   // 2. Fetch pending matches + completed matches missing goals ─────────────
-  //    Also catches rows where goals_json is '[]' (empty array default)
   const { data: dbMatches, error: dbError } = await supabase
     .from('matches')
-    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, goals_json')
-    .or('status.neq.completed,goals_json.is.null,goals_json.eq.[]')
+    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, goals_json, fd_match_id')
+    .or('status.neq.completed,goals_json.is.null')
 
   if (dbError)
     return res.status(200).json({ skipped: true, reason: `db_fetch_error: ${dbError.message}`, ts: new Date().toISOString() })
@@ -110,24 +121,42 @@ export default async function handler(req, res) {
     )
     if (!fdMatch) continue
 
-    const newStatus = STATUS_MAP[fdMatch.status] ?? 'scheduled'
-    const newHome   = fdMatch.score?.fullTime?.home ?? null
-    const newAway   = fdMatch.score?.fullTime?.away ?? null
-    const newMinute = fdMatch.minute ?? null
-    const newGoals  = fdMatch.goals ?? []
+    const newStatus  = STATUS_MAP[fdMatch.status] ?? 'scheduled'
+    const newHome    = fdMatch.score?.fullTime?.home ?? null
+    const newAway    = fdMatch.score?.fullTime?.away ?? null
+    const newMinute  = fdMatch.minute ?? null
+    const fdMatchId  = fdMatch.id   // integer from FD
 
-    const goalsEmpty   = !dbMatch.goals_json || dbMatch.goals_json.length === 0
-    const goalsFilled  = newGoals.length > 0
+    const goalsEmpty = !dbMatch.goals_json || dbMatch.goals_json.length === 0
+    const isComplete = newStatus === 'completed'
 
-    const changed =
-      newStatus !== dbMatch.status     ||
+    const statusChanged =
+      newStatus !== dbMatch.status ||
       newHome   !== dbMatch.home_score ||
-      newAway   !== dbMatch.away_score ||
-      (goalsEmpty && goalsFilled)
+      newAway   !== dbMatch.away_score
 
+    // Fetch goals via individual match endpoint when:
+    //   a) match is complete and goals are missing, OR
+    //   b) match just transitioned to complete
+    let newGoals = null
+    if (isComplete && goalsEmpty) {
+      newGoals = await fetchFdMatchGoals(fdMatchId, apiKey)
+    }
+
+    const changed = statusChanged || (newGoals && newGoals.length > 0)
     if (!changed) continue
 
-    toUpdate.push({ id: dbMatch.id, status: newStatus, home_score: newHome, away_score: newAway, match_minute: newMinute, goals_json: newGoals })
+    const row = {
+      id:           dbMatch.id,
+      status:       newStatus,
+      home_score:   newHome,
+      away_score:   newAway,
+      match_minute: newMinute,
+      fd_match_id:  fdMatchId,
+    }
+    if (newGoals !== null) row.goals_json = newGoals
+
+    toUpdate.push(row)
 
     if (newStatus === 'completed' && dbMatch.status !== 'completed')
       newlyComplete.push(dbMatch.id)
