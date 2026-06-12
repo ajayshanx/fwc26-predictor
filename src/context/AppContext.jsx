@@ -1,33 +1,36 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { calcPoints } from '../utils/scoring'
 
 const AppContext = createContext(null)
 
 export function AppProvider({ children }) {
-  const [user,        setUser]        = useState(null)   // { id, email, name, nickname }
-  const [groups,      setGroups]      = useState([])     // groups user belongs to
-  const [activeGroup, setActiveGroup] = useState(null)   // currently selected group
-  const [groupMembers,setGroupMembers]= useState([])     // users in activeGroup
-  const [matches,     setMatches]     = useState([])     // all matches
-  const [teams,       setTeams]       = useState([])     // all teams
-  const [predictions, setPredictions] = useState([])     // current user's predictions
-  const [allPredictions, setAllPredictions] = useState([]) // all group members' predictions
-  const [loading,     setLoading]     = useState(true)
+  const [user,                setUser]                = useState(null)
+  const [groups,              setGroups]              = useState([])
+  const [activeGroup,         setActiveGroup]         = useState(null)
+  const [groupMembers,        setGroupMembers]        = useState([])
+  const [matches,             setMatches]             = useState([])
+  const [teams,               setTeams]               = useState([])
+  const [predictions,         setPredictions]         = useState([])
+  const [allPredictions,      setAllPredictions]      = useState([])
+  const [knockoutPredictions, setKnockoutPredictions] = useState([])
+  const [loading,             setLoading]             = useState(true)
 
   const teamsMap = Object.fromEntries(teams.map(t => [t.code, t]))
 
   // ── Bootstrap on user login ──────────────────────────────────────────────
   const bootstrap = useCallback(async (userId) => {
-    const [matchRes, teamRes, predRes, memberRes] = await Promise.all([
+    const [matchRes, teamRes, predRes, memberRes, koPredRes] = await Promise.all([
       supabase.from('matches').select('*').order('kickoff_utc'),
       supabase.from('teams').select('*'),
       supabase.from('predictions').select('*').eq('user_id', userId),
       supabase.from('group_members').select('group_id').eq('user_id', userId),
+      supabase.from('knockout_predictions').select('*').eq('user_id', userId),
     ])
     setMatches(matchRes.data   || [])
     setTeams(teamRes.data      || [])
     setPredictions(predRes.data || [])
+    setKnockoutPredictions(koPredRes.data || [])
 
     if (memberRes.data?.length) {
       const groupIds = memberRes.data.map(r => r.group_id)
@@ -68,10 +71,6 @@ export function AppProvider({ children }) {
       .channel('matches-realtime')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' },
         payload => {
-          // Only merge the fields that legitimately change during a match.
-          // Avoid spreading all of payload.new — char(3) columns (home_team,
-          // away_team, group_letter) can come back truncated from the realtime
-          // WAL decoder, which corrupts team codes in state.
           setMatches(prev => prev.map(m => {
             if (m.id !== payload.new.id) return m
             return {
@@ -82,7 +81,6 @@ export function AppProvider({ children }) {
               match_minute: payload.new.match_minute,
             }
           }))
-          // Recalculate points for completed match
           if (payload.new.status === 'completed') {
             setPredictions(prev => prev.map(p => {
               if (p.match_id !== payload.new.id) return p
@@ -113,7 +111,7 @@ export function AppProvider({ children }) {
     return () => { supabase.removeChannel(channel) }
   }, [activeGroup])
 
-  // ── Save / update a prediction ───────────────────────────────────────────
+  // ── Save / update a match prediction ────────────────────────────────────
   const savePrediction = useCallback(async (matchId, homeScore, awayScore) => {
     if (!user) return
     const { data, error } = await supabase
@@ -129,6 +127,37 @@ export function AppProvider({ children }) {
       })
     }
     return { error }
+  }, [user])
+
+  // ── Save / clear a knockout qualifier prediction ─────────────────────────
+  const saveKnockoutPrediction = useCallback(async (groupLetter, qualifiedAs, teamCode) => {
+    if (!user) return
+    if (!teamCode) {
+      // Clear the pick
+      await supabase.from('knockout_predictions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('group_letter', groupLetter)
+        .eq('qualified_as', qualifiedAs)
+      setKnockoutPredictions(prev =>
+        prev.filter(kp => !(kp.group_letter === groupLetter && kp.qualified_as === qualifiedAs))
+      )
+    } else {
+      const { data, error } = await supabase
+        .from('knockout_predictions')
+        .upsert(
+          { user_id: user.id, group_letter: groupLetter, qualified_as: qualifiedAs, team_code: teamCode },
+          { onConflict: 'user_id,group_letter,qualified_as' }
+        )
+        .select()
+        .single()
+      if (!error && data) {
+        setKnockoutPredictions(prev => {
+          const filtered = prev.filter(kp => !(kp.group_letter === groupLetter && kp.qualified_as === qualifiedAs))
+          return [...filtered, data]
+        })
+      }
+    }
   }, [user])
 
   // ── Refresh groups (after create/join) ───────────────────────────────────
@@ -150,7 +179,9 @@ export function AppProvider({ children }) {
     matches, teams, teamsMap,
     predictions, setPredictions,
     allPredictions,
+    knockoutPredictions,
     savePrediction,
+    saveKnockoutPrediction,
     loading,
     bootstrap,
   }

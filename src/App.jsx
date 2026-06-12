@@ -2,25 +2,23 @@ import { useEffect, useState } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import { supabase } from './lib/supabase'
 import Header from './components/Header'
-import RulesTab            from './tabs/RulesTab'
-import ScheduleTab         from './tabs/ScheduleTab'
-import SharePlayTab        from './tabs/SharePlayTab'
-import MyPredictionsTab    from './tabs/MyPredictionsTab'
-import PredictedStandingsTab from './tabs/PredictedStandingsTab'
-import StandingsTab        from './tabs/StandingsTab'
-import PointsTableTab      from './tabs/PointsTableTab'
-import FeedbackTab         from './tabs/FeedbackTab'
+import RulesTab      from './tabs/RulesTab'
+import ScheduleTab   from './tabs/ScheduleTab'
+import SharePlayTab  from './tabs/SharePlayTab'
+import PredictionsTab from './tabs/PredictionsTab'
+import StandingsTab  from './tabs/StandingsTab'
+import PointsTableTab from './tabs/PointsTableTab'
+import FeedbackTab   from './tabs/FeedbackTab'
 
 // ── Tab definition ──────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'rules',      label: 'Rules'        },
-  { id: 'schedule',   label: 'Schedule'     },
-  { id: 'share',      label: 'Groups'       },
-  { id: 'predict',    label: 'Predictions'  },
-  { id: 'predstand',  label: 'My Standings' },
-  { id: 'standings',  label: 'Standings'    },
-  { id: 'points',     label: 'Points'       },
-  { id: 'feedback',   label: 'Feedback'     },
+  { id: 'rules',     label: 'Rules'       },
+  { id: 'schedule',  label: 'Schedule'    },
+  { id: 'share',     label: 'Groups'      },
+  { id: 'predict',   label: 'Predictions' },
+  { id: 'standings', label: 'Standings'   },
+  { id: 'points',    label: 'Points'      },
+  { id: 'feedback',  label: 'Feedback'    },
 ]
 
 // Adds a user to the group identified by an invite token (idempotent — upsert).
@@ -28,19 +26,50 @@ async function joinGroupByToken(userId, token) {
   const { data: group } = await supabase.from('groups').select('id').eq('invite_token', token).single()
   if (group) {
     await supabase.from('group_members').upsert({ group_id: group.id, user_id: userId }, { onConflict: 'group_id,user_id' })
-    // Clean token from URL without reload
     window.history.replaceState({}, '', window.location.pathname)
     return true
   }
   return false
 }
 
+// ── Knockout popup (shown once per user after deploy) ───────────────────────
+const KO_POPUP_KEY = 'fwc26_ko_popup_v1'
+
+function KnockoutPopup({ onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+      <div className="card p-6 max-w-md w-full shadow-2xl">
+        <div className="text-3xl mb-3 text-center">🏆</div>
+        <h2 className="text-gold font-bold text-lg text-center mb-4">Knockout Predictions Open!</h2>
+        <p className="text-slate-300 text-sm leading-relaxed mb-3">
+          The first set of knockout predictions can now be made. Check the{' '}
+          <span className="text-gold font-semibold">Rules</span> and{' '}
+          <span className="text-gold font-semibold">Predictions</span> tabs to know more and
+          make your first knockout predictions before{' '}
+          <span className="text-gold font-semibold">24th June</span>!
+        </p>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          <span className="text-white font-semibold">My Standings</span> has been moved into
+          Predictions to help make your predictions easier.
+        </p>
+        <button
+          onClick={onClose}
+          className="mt-5 w-full bg-gold hover:bg-gold-light text-navy-900 font-bold
+                     py-2.5 rounded-lg transition-colors"
+        >
+          Got it!
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Inner app (needs context) ───────────────────────────────────────────────
 function InnerApp() {
   const { user, setUser, bootstrap, loading, refreshGroups } = useApp()
-  const [activeTab, setActiveTab] = useState('rules')
+  const [activeTab,    setActiveTab]    = useState('rules')
+  const [showKoPopup,  setShowKoPopup]  = useState(false)
 
-  // Check for group invite token in URL
   const params    = new URLSearchParams(window.location.search)
   const joinToken = params.get('token')
 
@@ -50,8 +79,6 @@ function InnerApp() {
       supabase.from('users').select('*').eq('id', stored).single()
         .then(async ({ data }) => {
           if (data) {
-            // Returning user clicking an invite link — join the group too,
-            // not just first-time signups (previously only handled in AuthFlow)
             if (joinToken) {
               const joined = await joinGroupByToken(data.id, joinToken)
               if (joined) await refreshGroups()
@@ -64,6 +91,18 @@ function InnerApp() {
         })
     }
   }, [])
+
+  // Show knockout popup once per user
+  useEffect(() => {
+    if (user && !localStorage.getItem(KO_POPUP_KEY)) {
+      setShowKoPopup(true)
+    }
+  }, [user])
+
+  function dismissKoPopup() {
+    localStorage.setItem(KO_POPUP_KEY, '1')
+    setShowKoPopup(false)
+  }
 
   if (!user) {
     return <AuthFlow joinToken={joinToken} onAuth={(u) => { setUser(u); bootstrap(u.id) }} />
@@ -79,13 +118,13 @@ function InnerApp() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {showKoPopup && <KnockoutPopup onClose={dismissKoPopup} />}
       <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
         {activeTab === 'rules'     && <RulesTab />}
         {activeTab === 'schedule'  && <ScheduleTab />}
         {activeTab === 'share'     && <SharePlayTab />}
-        {activeTab === 'predict'   && <MyPredictionsTab />}
-        {activeTab === 'predstand' && <PredictedStandingsTab />}
+        {activeTab === 'predict'   && <PredictionsTab />}
         {activeTab === 'standings' && <StandingsTab />}
         {activeTab === 'points'    && <PointsTableTab />}
         {activeTab === 'feedback'  && <FeedbackTab />}
@@ -96,7 +135,7 @@ function InnerApp() {
 
 // ── Auth Flow ───────────────────────────────────────────────────────────────
 function AuthFlow({ joinToken, onAuth }) {
-  const [step,     setStep]     = useState('email')  // email | register
+  const [step,     setStep]     = useState('email')
   const [email,    setEmail]    = useState('')
   const [name,     setName]     = useState('')
   const [nickname, setNickname] = useState('')
@@ -109,7 +148,6 @@ function AuthFlow({ joinToken, onAuth }) {
     const { data } = await supabase.from('users').select('*').eq('email', email.trim().toLowerCase()).single()
     if (data) {
       localStorage.setItem('fwc26_user_id', data.id)
-      // If arriving via invite, add to group before redirecting
       if (joinToken) await joinGroupByToken(data.id, joinToken)
       onAuth(data)
     } else {
@@ -139,7 +177,6 @@ function AuthFlow({ joinToken, onAuth }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-10">
           <div className="text-5xl mb-4">🏆</div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">FIFA WORLD CUP 2026</h1>
