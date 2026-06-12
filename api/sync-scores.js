@@ -101,9 +101,14 @@ export default async function handler(req, res) {
   for (const dbMatch of dbMatches) {
     const dbKickoffMs = new Date(dbMatch.kickoff_utc).getTime()
 
-    const fdMatch = fdMatches?.find(m =>
-      Math.abs(new Date(m.utcDate).getTime() - dbKickoffMs) < 30 * 60 * 1000
-    )
+    // Match by TLA (primary) — same FIFA 3-letter codes used in both systems.
+    // Fall back to kickoff-time window if TLA is missing (shouldn't happen for WC).
+    const fdMatch = fdMatches?.find(m => {
+      if (m.homeTeam?.tla && m.awayTeam?.tla) {
+        return m.homeTeam.tla === dbMatch.home_team && m.awayTeam.tla === dbMatch.away_team
+      }
+      return Math.abs(new Date(m.utcDate).getTime() - dbKickoffMs) < 30 * 60 * 1000
+    })
     if (!fdMatch) continue
 
     const newStatus = STATUS_MAP[fdMatch.status] ?? 'scheduled'

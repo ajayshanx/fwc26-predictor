@@ -48,11 +48,13 @@ export default async function handler(req, res) {
     matchCount:     matches.length,
     completedCount: completed.length,
     completed: completed.map(m => ({
-      fdId:  m.id,
-      date:  m.utcDate,
-      home:  m.homeTeam?.name,
-      away:  m.awayTeam?.name,
-      score: `${m.score?.fullTime?.home}-${m.score?.fullTime?.away}`,
+      fdId:    m.id,
+      date:    m.utcDate,
+      homeTla: m.homeTeam?.tla,
+      awayTla: m.awayTeam?.tla,
+      home:    m.homeTeam?.name,
+      away:    m.awayTeam?.name,
+      score:   `${m.score?.fullTime?.home}-${m.score?.fullTime?.away}`,
     })),
     firstMatchDetail: matchDetail,
   })
