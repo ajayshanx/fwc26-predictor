@@ -130,12 +130,15 @@ export default async function handler(req, res) {
   }
 
   // 4. Write updates to Supabase ───────────────────────────────────────────
-  if (toUpdate.length > 0) {
+  // Use .update() not .upsert() — rows always exist, upsert would try INSERT
+  // first which hits NOT NULL on kickoff_utc before the conflict check fires.
+  for (const { id, status, home_score, away_score, match_minute } of toUpdate) {
     const { error: updateError } = await supabase
       .from('matches')
-      .upsert(toUpdate, { onConflict: 'id' })
+      .update({ status, home_score, away_score, match_minute })
+      .eq('id', id)
     if (updateError)
-      return res.status(200).json({ skipped: true, reason: `db_upsert_error: ${updateError.message}`, updated: 0, ts: new Date().toISOString() })
+      return res.status(200).json({ skipped: true, reason: `db_update_error: ${updateError.message}`, updated: 0, ts: new Date().toISOString() })
   }
 
   // 5. Award points for newly completed matches ────────────────────────────

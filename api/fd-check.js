@@ -77,12 +77,17 @@ export default async function handler(req, res) {
   // 4. Optionally execute writes ──────────────────────────────────────────────
   let writeResult = null
   if (doWrite && toUpdate.length > 0) {
-    const { error: upsertErr } = await supabase
-      .from('matches')
-      .upsert(toUpdate, { onConflict: 'id' })
-    writeResult = upsertErr
-      ? { ok: false, error: upsertErr.message }
-      : { ok: true,  updated: toUpdate.length }
+    const errors = []
+    for (const { id, status, home_score, away_score, match_minute } of toUpdate) {
+      const { error } = await supabase
+        .from('matches')
+        .update({ status, home_score, away_score, match_minute })
+        .eq('id', id)
+      if (error) errors.push(error.message)
+    }
+    writeResult = errors.length
+      ? { ok: false, errors }
+      : { ok: true, updated: toUpdate.length }
   }
 
   return res.status(200).json({
