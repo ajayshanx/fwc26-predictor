@@ -273,43 +273,14 @@ function PostMatchDetail({ match, homeTeam, awayTeam }) {
   const homeWon  = match.home_score > match.away_score
   const awayWon  = match.away_score > match.home_score
 
-  const goals = match.goals_json ?? []
-  const homeGoals = goals.filter(g => g.team?.name === homeName || g.team?.name === homeTeam.name)
-  const awayGoals = goals.filter(g => g.team?.name === awayName || g.team?.name === awayTeam.name)
-
   return (
     <div className="space-y-3 text-sm">
-      {/* Scorers — two columns */}
-      {goals.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          {/* Home scorers */}
-          <div>
-            <p className={`font-semibold mb-1 text-xs sm:text-sm ${homeWon ? 'text-white' : 'text-slate-400'}`}>{homeName}</p>
-            {homeGoals.length === 0
-              ? <p className="text-slate-600 text-xs italic">—</p>
-              : homeGoals.map((g, i) => (
-                  <p key={i} className="text-slate-300 text-xs">
-                    ⚽ {g.scorer?.name} <span className="text-slate-500">{g.minute}'</span>
-                  </p>
-                ))
-            }
-          </div>
-          {/* Away scorers */}
-          <div className="text-right">
-            <p className={`font-semibold mb-1 text-xs sm:text-sm ${awayWon ? 'text-white' : 'text-slate-400'}`}>{awayName}</p>
-            {awayGoals.length === 0
-              ? <p className="text-slate-600 text-xs italic">—</p>
-              : awayGoals.map((g, i) => (
-                  <p key={i} className="text-slate-300 text-xs">
-                    <span className="text-slate-500">{g.minute}'</span> {g.scorer?.name} ⚽
-                  </p>
-                ))
-            }
-          </div>
-        </div>
-      ) : (
-        <p className="text-slate-600 text-xs italic">Scorer data loading…</p>
-      )}
+      {/* Teams & result */}
+      <div className="flex items-center justify-between">
+        <span className={`font-semibold text-xs sm:text-sm ${homeWon ? 'text-white' : 'text-slate-400'}`}>{homeName}</span>
+        <span className="text-gold font-bold text-lg mx-3">{match.home_score} – {match.away_score}</span>
+        <span className={`font-semibold text-xs sm:text-sm ${awayWon ? 'text-white' : 'text-slate-400'}`}>{awayName}</span>
+      </div>
 
       {/* Venue & date */}
       <div className="border-t border-navy-600 pt-3 flex flex-col sm:flex-row sm:justify-between gap-1">
