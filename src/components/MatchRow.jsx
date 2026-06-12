@@ -95,7 +95,7 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
         </div>
 
         {/* Centre: score inputs (predictions tab) OR score/time (schedule tab) */}
-        <div className={`flex items-center justify-center flex-shrink-0 ${showPredInput ? 'w-24 sm:w-44' : 'w-20 sm:w-44'}`} onClick={e => e.stopPropagation()}>
+        <div className={`flex items-center justify-center flex-shrink-0 ${showPredInput ? 'w-20 sm:w-44' : 'w-20 sm:w-44'}`} onClick={e => e.stopPropagation()}>
           {showPredInput ? (
             <PredInputs
               homeVal={inputHome} awayVal={inputAway}
@@ -130,9 +130,10 @@ export default function MatchRow({ match, prediction, onSave, showPredInput = fa
 
 function PredInputs({ homeVal, awayVal, setHome, setAway, onBlur, editable, saving, prediction, match, showActual }) {
   const colour = resultColour(prediction, match)
+  const showResult = showActual && match.status !== 'scheduled'
 
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
+    <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:gap-2">
       {/* Prediction inputs */}
       <div className="flex items-center gap-0.5 sm:gap-1">
         <input
@@ -150,22 +151,21 @@ function PredInputs({ homeVal, awayVal, setHome, setAway, onBlur, editable, savi
           onBlur={onBlur} disabled={!editable}
           className="input-score !w-8 !h-8 !text-sm sm:!w-12 sm:!h-10 sm:!text-xl"
         />
+        {saving && <span className="text-slate-500 text-xs">…</span>}
       </div>
 
-      {saving && <span className="text-slate-500 text-xs">…</span>}
-
-      {/* Actual result / live score — only takes space when there's something to show */}
-      {showActual && match.status !== 'scheduled' && (
-        <div className="ml-1 sm:ml-2 text-right w-12 sm:w-16 flex-shrink-0">
+      {/* Actual result / live score — stacks below inputs on mobile, inline on sm+ */}
+      {showResult && (
+        <div className="text-center sm:text-right sm:w-16 flex-shrink-0">
           {match.status === 'completed' && (
-            <span className={`font-bold text-xs sm:text-sm ${colour}`}>
+            <span className={`font-bold text-xs ${colour}`}>
               {match.home_score}–{match.away_score}
             </span>
           )}
           {match.status === 'live' && (
-            <span className="text-red-400 text-xs sm:text-sm font-bold">
+            <span className="text-red-400 text-xs font-bold">
               {match.home_score}–{match.away_score}
-              <span className="text-xs ml-1">{match.match_minute}'</span>
+              <span className="ml-0.5">{match.match_minute}'</span>
             </span>
           )}
         </div>
