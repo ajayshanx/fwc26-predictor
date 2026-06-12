@@ -20,11 +20,16 @@ export default async function handler(req, res) {
   }
 
   const matches = body.matches ?? []
+  const completed = matches.filter(m => m.status === 'FINISHED').map(m => ({
+    date: m.utcDate,
+    home: m.homeTeam?.name,
+    away: m.awayTeam?.name,
+    score: `${m.score?.fullTime?.home}-${m.score?.fullTime?.away}`,
+  }))
   return res.status(200).json({
     fdStatus:    fdRes.status,
     matchCount:  matches.length,
-    firstMatch:  matches[0]  ? { date: matches[0].utcDate,  status: matches[0].status,  home: matches[0].homeTeam?.name,  away: matches[0].awayTeam?.name  } : null,
-    latestMatch: matches.at(-1) ? { date: matches.at(-1).utcDate, status: matches.at(-1).status, home: matches.at(-1).homeTeam?.name, away: matches.at(-1).awayTeam?.name } : null,
-    completedCount: matches.filter(m => m.status === 'FINISHED').length,
+    completedCount: completed.length,
+    completed,
   })
 }
