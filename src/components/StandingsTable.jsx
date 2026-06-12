@@ -92,7 +92,12 @@ function TeamCell({ code }) {
     <div className="flex items-center gap-1.5 min-w-0">
       <FlagIcon flagCode={team.flag_code} size={14} className="flex-shrink-0" />
       <KitIcon  colours={[team.kit_home ?? '#cccccc']} size={16} className="flex-shrink-0 hidden sm:inline-block" />
-      <span className="text-white truncate text-xs sm:text-sm">{team.name || code}</span>
+      <span className="text-white truncate text-xs sm:text-sm">
+        {team.name || code}
+        {team.fifa_ranking && (
+          <span className="text-slate-500 font-normal ml-1">(#{team.fifa_ranking})</span>
+        )}
+      </span>
     </div>
   )
 }

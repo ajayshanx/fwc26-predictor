@@ -64,6 +64,7 @@ const SECTIONS = [
     title: 'Prediction deadline',
     paragraphs: [
       [t("All predictions lock exactly one hour before each match's scheduled kick-off. The deadline is per match, so you can still predict later matches even after some have kicked off.")],
+      [t('Teams qualifying for the knockout phase have to be predicted by 24th June.')],
     ],
   },
   {
@@ -78,9 +79,22 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Knockout phase rules',
+    paragraphs: [
+      [t('The top 2 teams in each group qualify automatically, joined by the 8 best 3rd-placed teams across all 12 groups — 32 teams in total enter the knockout rounds.')],
+      [
+        t('From the '), name('Predictions'),
+        t(' tab → '), name('Knockout Teams'),
+        t(': select 2 qualifiers per group, plus up to 8 third-place teams across all groups. You have until 24th June to make all your picks.'),
+      ],
+      [t('Scoring: 2 points for correctly predicting a qualifying team. Bonus 1 point if they qualify in the exact position you picked (1st or 2nd). 3rd-place picks earn 2 points if they advance, with no position bonus.')],
+      [t('Your knockout qualifier picks are completely independent from your match predictions — pick whoever you think will actually qualify, even if your score predictions point elsewhere.')],
+    ],
+  },
+  {
     title: 'Scope',
     paragraphs: [
-      [t("We're predicting the group stage only to begin with — 48 teams, 12 groups, 72 matches. The knockout phase will be added as the tournament progresses.")],
+      [t('We are predicting the full tournament — 72 group stage matches, knockout qualifier picks, and knockout match predictions as the schedule is confirmed. More prediction options will open up as the tournament progresses.')],
     ],
   },
 ]
@@ -318,6 +332,10 @@ function OriginalContent() {
           scheduled kick-off</span>. The deadline is per match, so you can still predict later matches even
           after some have kicked off.
         </p>
+        <p className="mt-3">
+          Teams qualifying for the knockout phase have to be predicted by{' '}
+          <span className="text-gold font-semibold">24th June</span>.
+        </p>
       </Section>
 
       <Section title="Player groups">
@@ -328,10 +346,36 @@ function OriginalContent() {
         </p>
       </Section>
 
+      <Section title="Knockout phase rules">
+        <div className="space-y-3">
+          <p>
+            The top 2 teams in each group qualify automatically, joined by the{' '}
+            <span className="text-gold font-semibold">8 best 3rd-placed teams</span> across all 12 groups —
+            32 teams in total enter the knockout rounds.
+          </p>
+          <p>
+            From the <span className="text-gold font-semibold">Predictions</span> tab →{' '}
+            <span className="text-gold font-semibold">Knockout Teams</span>: select 2 qualifiers per group,
+            plus up to 8 third-place teams across all groups. You have until{' '}
+            <span className="text-gold font-semibold">24th June</span> to make all your picks.
+          </p>
+          <div className="space-y-2 mt-1">
+            <PointsRow pts={2} colour="text-blue-400" label="Correctly predicting a qualifying team" />
+            <PointsRow pts={3} colour="text-gold" label="Correct team + correct position (1st or 2nd)" />
+            <PointsRow pts={2} colour="text-slate-300" label="Correct 3rd-place team (no position bonus)" />
+          </div>
+          <p className="text-slate-500 text-xs mt-2 italic">
+            Knockout qualifier picks are independent from your match predictions — you can pick any team you think
+            will qualify, regardless of your score predictions.
+          </p>
+        </div>
+      </Section>
+
       <Section title="Scope">
         <p>
-          We're predicting the <span className="text-gold font-semibold">group stage only</span> to begin with —
-          48 teams, 12 groups, 72 matches. The knockout phase will be added as the tournament progresses.
+          We're predicting the <span className="text-gold font-semibold">full tournament</span> —
+          72 group stage matches, knockout qualifier picks, and knockout match predictions as the schedule is
+          confirmed. More prediction options will open up as the tournament progresses.
         </p>
       </Section>
     </div>
