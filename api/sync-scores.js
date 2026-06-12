@@ -86,10 +86,11 @@ export default async function handler(req, res) {
   const fdMatches = fdBody.matches
 
   // 2. Fetch pending matches + completed matches missing goals ─────────────
+  //    Also catches rows where goals_json is '[]' (empty array default)
   const { data: dbMatches, error: dbError } = await supabase
     .from('matches')
     .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, goals_json')
-    .or('status.neq.completed,goals_json.is.null')
+    .or('status.neq.completed,goals_json.is.null,goals_json.eq.[]')
 
   if (dbError)
     return res.status(200).json({ skipped: true, reason: `db_fetch_error: ${dbError.message}`, ts: new Date().toISOString() })
