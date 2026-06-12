@@ -284,6 +284,7 @@ function GroupQualifierPicker({ groupLetter, teams, matches, getScore, teamsMap,
         </div>
         <p className="text-xs text-slate-600 mt-4 italic">
           Independent from your match predictions — pick whoever you think will actually qualify.
+          2 pts per correct qualifier, +1 bonus for correct position.
         </p>
       </div>
     </div>

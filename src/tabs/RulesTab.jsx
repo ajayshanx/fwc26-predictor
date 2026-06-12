@@ -87,7 +87,7 @@ const SECTIONS = [
         t(' tab → '), name('Knockout Teams'),
         t(': select 2 qualifiers per group, plus up to 8 third-place teams across all groups. You have until 24th June to make all your picks.'),
       ],
-      [t('Scoring: 2 points for correctly predicting a qualifying team. Bonus 1 point if they qualify in the exact position you picked (1st or 2nd). 3rd-place picks earn 2 points if they advance, with no position bonus.')],
+      [t('Scoring: 2 points for correctly predicting a qualifying team. Bonus 1 point if they qualify in the exact position you picked — 1st, 2nd, or 3rd place. Maximum 3 points per team.')],
       [t('Your knockout qualifier picks are completely independent from your match predictions — pick whoever you think will actually qualify, even if your score predictions point elsewhere.')],
     ],
   },
@@ -361,8 +361,7 @@ function OriginalContent() {
           </p>
           <div className="space-y-2 mt-1">
             <PointsRow pts={2} colour="text-blue-400" label="Correctly predicting a qualifying team" />
-            <PointsRow pts={3} colour="text-gold" label="Correct team + correct position (1st or 2nd)" />
-            <PointsRow pts={2} colour="text-slate-300" label="Correct 3rd-place team (no position bonus)" />
+            <PointsRow pts={3} colour="text-gold" label="Correct team + correct position (1st, 2nd, or 3rd)" />
           </div>
           <p className="text-slate-500 text-xs mt-2 italic">
             Knockout qualifier picks are independent from your match predictions — you can pick any team you think
