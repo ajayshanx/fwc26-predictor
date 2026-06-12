@@ -85,11 +85,11 @@ export default async function handler(req, res) {
   }
   const fdMatches = fdBody.matches
 
-  // 2. Fetch all non-completed matches from Supabase ───────────────────────
+  // 2. Fetch pending matches + completed matches missing goals ─────────────
   const { data: dbMatches, error: dbError } = await supabase
     .from('matches')
-    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score')
-    .neq('status', 'completed')
+    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, goals_json')
+    .or('status.neq.completed,goals_json.is.null')
 
   if (dbError)
     return res.status(200).json({ skipped: true, reason: `db_fetch_error: ${dbError.message}`, ts: new Date().toISOString() })
@@ -113,15 +113,20 @@ export default async function handler(req, res) {
     const newHome   = fdMatch.score?.fullTime?.home ?? null
     const newAway   = fdMatch.score?.fullTime?.away ?? null
     const newMinute = fdMatch.minute ?? null
+    const newGoals  = fdMatch.goals ?? []
+
+    const goalsEmpty   = !dbMatch.goals_json || dbMatch.goals_json.length === 0
+    const goalsFilled  = newGoals.length > 0
 
     const changed =
       newStatus !== dbMatch.status     ||
       newHome   !== dbMatch.home_score ||
-      newAway   !== dbMatch.away_score
+      newAway   !== dbMatch.away_score ||
+      (goalsEmpty && goalsFilled)
 
     if (!changed) continue
 
-    toUpdate.push({ id: dbMatch.id, status: newStatus, home_score: newHome, away_score: newAway, match_minute: newMinute })
+    toUpdate.push({ id: dbMatch.id, status: newStatus, home_score: newHome, away_score: newAway, match_minute: newMinute, goals_json: newGoals })
 
     if (newStatus === 'completed' && dbMatch.status !== 'completed')
       newlyComplete.push(dbMatch.id)
