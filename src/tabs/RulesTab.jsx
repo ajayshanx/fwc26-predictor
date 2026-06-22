@@ -64,7 +64,7 @@ const SECTIONS = [
     title: 'Prediction deadline',
     paragraphs: [
       [t("All predictions lock exactly one hour before each match's scheduled kick-off. The deadline is per match, so you can still predict later matches even after some have kicked off.")],
-      [t('Teams qualifying for the knockout phase have to be predicted by 24th June.')],
+      [t('Teams qualifying for the knockout phase have to be predicted by 8pm CET on 24th June (one hour before Matchday 3 begins).')],
     ],
   },
   {
@@ -85,7 +85,7 @@ const SECTIONS = [
       [
         t('From the '), name('Predictions'),
         t(' tab → '), name('Knockout Teams'),
-        t(': select 2 qualifiers per group, plus up to 8 third-place teams across all groups. You have until 24th June to make all your picks.'),
+        t(': select 2 qualifiers per group, plus up to 8 third-place teams across all groups. You have until 8pm CET on 24th June to make all your picks.'),
       ],
       [t('Scoring: 2 points for correctly predicting a qualifying team. Bonus 1 point if they qualify in the exact position you picked — 1st, 2nd, or 3rd place. Maximum 3 points per team.')],
       [t('Your knockout qualifier picks are completely independent from your match predictions — pick whoever you think will actually qualify, even if your score predictions point elsewhere.')],
@@ -334,7 +334,8 @@ function OriginalContent() {
         </p>
         <p className="mt-3">
           Teams qualifying for the knockout phase have to be predicted by{' '}
-          <span className="text-gold font-semibold">24th June</span>.
+          <span className="text-gold font-semibold">8pm CET on 24th June</span>{' '}
+          (one hour before Matchday 3 begins).
         </p>
       </Section>
 

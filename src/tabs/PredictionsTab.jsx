@@ -5,7 +5,7 @@ import FlagIcon from '../components/FlagIcon'
 import { aggregateStats } from '../utils/scoring'
 import { computeStandings } from '../utils/standings'
 
-const KNOCKOUT_DEADLINE = new Date('2026-06-25T00:00:00Z') // end of 24 June UTC
+const KNOCKOUT_DEADLINE = new Date('2026-06-24T18:00:00Z') // 20:00 CEST (UTC+2) on 24 June — 1hr before MD3
 const SUB_TABS = ['Group Stage', 'Knockout Teams', 'Knockout Matches']
 
 export default function PredictionsTab() {
@@ -131,7 +131,7 @@ function KnockoutTeamsContent() {
         <p className="text-xs text-slate-400">
           {deadlinePassed
             ? '🔒 Predictions locked — deadline of 24 June has passed.'
-            : 'Select 2 qualifiers per group + up to 8 third-place teams. Deadline: 24 June.'}
+            : 'Select 2 qualifiers per group + up to 8 third-place teams. Deadline: 8pm CET, 24 June.'}
         </p>
         <div className="flex gap-2">
           <span className={`text-xs font-semibold px-3 py-1 rounded-full border
