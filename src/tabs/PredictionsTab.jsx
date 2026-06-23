@@ -65,6 +65,7 @@ function GroupStageContent() {
       <div className="flex flex-wrap gap-x-4 gap-y-1 mb-6 text-xs text-slate-500">
         <span><span className="text-slate-300 font-semibold">1 pt</span> — any prediction</span>
         <span><span className="text-gold font-semibold">3 pts</span> — correct result</span>
+        <span><span className="text-blue-400 font-semibold">4 pts</span> — correct goal difference <span className="text-slate-600">(MD3+)</span></span>
         <span><span className="text-green-400 font-semibold">5 pts</span> — exact score</span>
       </div>
 

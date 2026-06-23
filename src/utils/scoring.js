@@ -1,25 +1,35 @@
 /**
  * Calculate points for a single prediction against a completed match result.
- * Points: Exact score = 5 | Correct result = 3 | Participated = 1 | No prediction = 0
+ *
+ * MD1 & MD2:  Exact score = 5 | Correct result = 3 | Participated = 1
+ * MD3+:       Exact score = 5 | Correct GD     = 4 | Correct result = 3 | Participated = 1
+ *
+ * "MD3+" includes matchday >= 3 AND knockout matches (matchday null).
  */
 export function calcPoints(prediction, match) {
   if (!prediction) return 0
   if (match.status !== 'completed') return null  // pending
 
   const { home_score: ph, away_score: pa } = prediction
-  const { home_score: mh, away_score: ma } = match
+  const { home_score: mh, away_score: ma, matchday } = match
 
   if (ph === mh && pa === ma) return 5
-  if (Math.sign(ph - pa) === Math.sign(mh - ma)) return 3
+
+  const correctResult = Math.sign(ph - pa) === Math.sign(mh - ma)
+  const md3plus = matchday === null || matchday === undefined || matchday >= 3
+
+  if (correctResult && md3plus && (ph - pa) === (mh - ma)) return 4
+  if (correctResult) return 3
   return 1
 }
 
 /**
  * Determine result colour class for a completed match row.
- * White  = no prediction
- * Gold   = correct result, wrong score
- * Red    = wrong result
- * Green  = exact score
+ * White   = no prediction
+ * Gold    = correct result, wrong score
+ * Blue    = correct goal difference (MD3+)
+ * Red     = wrong result
+ * Green   = exact score
  */
 export function resultColour(prediction, match) {
   if (match.status !== 'completed') return ''
@@ -27,6 +37,7 @@ export function resultColour(prediction, match) {
 
   const pts = calcPoints(prediction, match)
   if (pts === 5) return 'text-green-400'
+  if (pts === 4) return 'text-blue-400'
   if (pts === 3) return 'text-gold'
   return 'text-red-400'
 }

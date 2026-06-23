@@ -58,6 +58,7 @@ const SECTIONS = [
       [t('1 point — for every match you predict, right or wrong. 3 points — for correctly predicting the match result (win, draw or loss). 5 points — for predicting the exact final score.')],
       [t('Example A: you predict 3–0, the result is 2–0 → 3 points (correct result). Example B: you predict 3–0, the result is 3–0 → 5 points (exact score). Example C: you predict 3–0, the result is 0–1 → 1 point (you took part).')],
       [t('Points are not additive — you receive the highest applicable tier only.')],
+      [t('From Matchday 3 onwards, a new 4-point tier is added: correct goal difference. If you predict the right margin of victory (or a draw) but not the exact score, you earn 4 points. Example: the result is 3–1 and you predict 2–0 → 4 points (both predict a +2 home win). A 3–2 prediction still earns only 3 points (correct result, wrong goal difference).')],
     ],
   },
   {
@@ -311,14 +312,17 @@ function OriginalContent() {
         <div className="space-y-3">
           <PointsRow pts={1} colour="text-slate-300" label="For every match you predict (right or wrong)" />
           <PointsRow pts={3} colour="text-gold" label="For correctly predicting the match result (win/draw/loss)" />
+          <PointsRow pts={4} colour="text-blue-400" label={<>For the correct goal difference — same margin, wrong score <span className="text-slate-500 font-normal">(Matchday 3+)</span></>} />
           <PointsRow pts={5} colour="text-green-400" label="For predicting the exact final score" />
         </div>
         <div className="mt-5 space-y-2 text-sm text-slate-400">
-          <p><span className="text-white font-semibold">Example A:</span> You predict 3–0, the result is 2–0 →
-            <span className="text-gold font-semibold"> 3 points</span> (correct result)</p>
-          <p><span className="text-white font-semibold">Example B:</span> You predict 3–0, the result is 3–0 →
+          <p><span className="text-white font-semibold">Example A:</span> Result is 3–1. You predict 3–2 →
+            <span className="text-gold font-semibold"> 3 points</span> (correct result, wrong GD)</p>
+          <p><span className="text-white font-semibold">Example B:</span> Result is 3–1. You predict 2–0 →
+            <span className="text-blue-400 font-semibold"> 4 points</span> (correct GD of +2, from MD3)</p>
+          <p><span className="text-white font-semibold">Example C:</span> Result is 3–1. You predict 3–1 →
             <span className="text-green-400 font-semibold"> 5 points</span> (exact score)</p>
-          <p><span className="text-white font-semibold">Example C:</span> You predict 3–0, the result is 0–1 →
+          <p><span className="text-white font-semibold">Example D:</span> Result is 3–1. You predict 1–1 →
             <span className="text-slate-400 font-semibold"> 1 point</span> (participated)</p>
         </div>
         <p className="mt-4 text-slate-500 text-sm">
@@ -396,7 +400,7 @@ function PointsRow({ pts, colour, label }) {
     <div className="flex items-center gap-4">
       <div className={`text-2xl font-extrabold w-8 text-right ${colour}`}>{pts}</div>
       <div className="text-white text-xs font-semibold uppercase tracking-widest w-16">
-        {pts === 5 ? 'EXACT' : pts === 3 ? 'RESULT' : 'PLAYED'}
+        {pts === 5 ? 'EXACT' : pts === 4 ? 'GD' : pts === 3 ? 'RESULT' : 'PLAYED'}
       </div>
       <div className="text-slate-400 text-sm">{label}</div>
     </div>
