@@ -13,8 +13,9 @@ export function AppProvider({ children }) {
   const [teams,               setTeams]               = useState([])
   const [predictions,         setPredictions]         = useState([])
   const [allPredictions,      setAllPredictions]      = useState([])
-  const [knockoutPredictions, setKnockoutPredictions] = useState([])
-  const [loading,             setLoading]             = useState(true)
+  const [knockoutPredictions,    setKnockoutPredictions]    = useState([])
+  const [allKnockoutPredictions, setAllKnockoutPredictions] = useState([])
+  const [loading,                setLoading]                = useState(true)
 
   const teamsMap = Object.fromEntries(teams.map(t => [t.code, t]))
 
@@ -55,11 +56,12 @@ export function AppProvider({ children }) {
 
       const memberIds = members?.map(m => m.user_id) || []
       if (memberIds.length) {
-        const { data: preds } = await supabase
-          .from('predictions')
-          .select('*')
-          .in('user_id', memberIds)
+        const [{ data: preds }, { data: koPreds }] = await Promise.all([
+          supabase.from('predictions').select('*').in('user_id', memberIds),
+          supabase.from('knockout_predictions').select('*').in('user_id', memberIds),
+        ])
         setAllPredictions(preds || [])
+        setAllKnockoutPredictions(koPreds || [])
       }
     })()
   }, [activeGroup, user])
@@ -180,6 +182,7 @@ export function AppProvider({ children }) {
     predictions, setPredictions,
     allPredictions,
     knockoutPredictions,
+    allKnockoutPredictions,
     savePrediction,
     saveKnockoutPrediction,
     loading,
