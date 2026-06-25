@@ -2,9 +2,13 @@ import { useApp } from '../context/AppContext'
 import { aggregateStats } from '../utils/scoring'
 
 export default function Header({ activeTab, setActiveTab, tabs }) {
-  const { user, groups, activeGroup, setActiveGroup, predictions, matches } = useApp()
+  const { user, groups, activeGroup, setActiveGroup, predictions, matches, knockoutPredictions } = useApp()
 
   const stats = aggregateStats(predictions, matches)
+  const koPoints = knockoutPredictions
+    .filter(kp => kp.points_awarded !== null)
+    .reduce((s, kp) => s + kp.points_awarded, 0)
+  const totalPoints = stats.totalPoints + koPoints
 
   function handleGroupChange(e) {
     const group = groups.find(g => g.id === e.target.value)
@@ -56,7 +60,7 @@ export default function Header({ activeTab, setActiveTab, tabs }) {
           {/* Total points */}
           <StatChip
             label="Points"
-            value={stats.totalPoints}
+            value={totalPoints}
             highlight
           />
         </div>

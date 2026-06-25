@@ -38,8 +38,12 @@ export default function PredictionsTab() {
 
 // ── Group Stage ──────────────────────────────────────────────────────────────
 function GroupStageContent() {
-  const { matches, predictions, savePrediction } = useApp()
+  const { matches, predictions, savePrediction, knockoutPredictions } = useApp()
   const stats = aggregateStats(predictions, matches)
+  const koPoints = knockoutPredictions
+    .filter(kp => kp.points_awarded !== null)
+    .reduce((s, kp) => s + kp.points_awarded, 0)
+  const totalPoints = stats.totalPoints + koPoints
 
   const byDate = useMemo(() => {
     const map = {}
@@ -57,7 +61,7 @@ function GroupStageContent() {
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         <StatTile label="Predicted"  sub="matches"        value={`${stats.predicted}/${stats.total}`} />
-        <StatTile label="Points"     sub="total earned"   value={stats.totalPoints} highlight />
+        <StatTile label="Points"     sub="total earned"   value={totalPoints} highlight />
         <StatTile label="Accuracy"   sub="result rate"    value={stats.accuracy  !== null ? `${stats.accuracy}%`  : '–'} />
         <StatTile label="Precision"  sub="exact score rate" value={stats.precision !== null ? `${stats.precision}%` : '–'} />
       </div>
