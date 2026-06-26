@@ -119,8 +119,10 @@ export default async function handler(req, res) {
       if (dbMatch.home_team && dbMatch.away_team && m.homeTeam?.tla && m.awayTeam?.tla) {
         return m.homeTeam.tla === dbMatch.home_team && m.awayTeam.tla === dbMatch.away_team
       }
-      // Fallback: kickoff-time window ±30 min (covers TBD slots)
-      return Math.abs(new Date(m.utcDate).getTime() - dbKickoffMs) < 30 * 60 * 1000
+      // Fallback: kickoff-time window ±90 min.
+      // Use a wider window because FD's stored kickoff times can differ from our
+      // seeded values by up to ~1 hour (timezone/DST edge cases in the source schedule).
+      return Math.abs(new Date(m.utcDate).getTime() - dbKickoffMs) < 90 * 60 * 1000
     })
   }
 
@@ -214,6 +216,11 @@ export default async function handler(req, res) {
       update.away_label = null
     }
     if (!Object.keys(update).length) continue
+    // Also correct the kickoff_utc to FD's value — our seeded times can be
+    // up to ~1 hour off, which would break TLA-less score sync later.
+    if (fdMatch.utcDate && fdMatch.utcDate !== dbMatch.kickoff_utc) {
+      update.kickoff_utc = fdMatch.utcDate
+    }
     const { error } = await supabase.from('matches').update(update).eq('id', dbMatch.id)
     if (!error) tbdUpdated++
   }

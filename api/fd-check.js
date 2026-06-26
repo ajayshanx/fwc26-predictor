@@ -60,9 +60,12 @@ export default async function handler(req, res) {
   const detail   = []
 
   for (const fdm of completed) {
-    const dbRow = dbMatches?.find(
-      d => d.home_team === fdm.homeTeam?.tla && d.away_team === fdm.awayTeam?.tla
-    )
+    const fdKickoffMs = new Date(fdm.utcDate).getTime()
+    const dbRow = dbMatches?.find(d => {
+      if (d.home_team && d.away_team && fdm.homeTeam?.tla && fdm.awayTeam?.tla)
+        return d.home_team === fdm.homeTeam.tla && d.away_team === fdm.awayTeam.tla
+      return Math.abs(new Date(d.kickoff_utc).getTime() - fdKickoffMs) < 90 * 60 * 1000
+    })
     const newStatus = STATUS_MAP[fdm.status] ?? 'scheduled'
     const newHome   = fdm.score?.fullTime?.home ?? null
     const newAway   = fdm.score?.fullTime?.away ?? null
