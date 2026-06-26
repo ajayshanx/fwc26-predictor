@@ -33,10 +33,13 @@ async function joinGroupByToken(userId, token) {
 }
 
 // ── Knockout popup (shown once per user after deploy) ───────────────────────
-const KO_POPUP_KEY   = 'fwc26_ko_popup_v1'
+const KO_POPUP_KEY       = 'fwc26_ko_popup_v1'
 
 // ── Matchday 3 scoring popup (shown once per user after deploy) ──────────────
-const MD3_POPUP_KEY  = 'fwc26_md3_scoring_v1'
+const MD3_POPUP_KEY      = 'fwc26_md3_scoring_v1'
+
+// ── KO Matches popup (shown once per user after deploy) ──────────────────────
+const KO_MATCHES_POPUP_KEY = 'fwc26_ko_matches_v1'
 
 function Md3ScoringPopup({ onClose }) {
   return (
@@ -101,12 +104,78 @@ function KnockoutPopup({ onClose }) {
   )
 }
 
+function KoMatchesPopup({ onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+      <div className="card p-6 max-w-md w-full shadow-2xl overflow-y-auto max-h-[90vh]">
+        <div className="text-3xl mb-3 text-center">⚔️</div>
+        <h2 className="text-gold font-bold text-lg text-center mb-4">Knockout Matches Are Here!</h2>
+
+        <p className="text-slate-300 text-sm leading-relaxed mb-4">
+          Knockout matches are now being finalized as the final group matches are played. You can
+          see these on the <span className="text-gold font-semibold">Schedule</span> and{' '}
+          <span className="text-gold font-semibold">Predictions</span> tabs by clicking{' '}
+          <span className="text-white font-semibold">Knockout Matches</span>. You can start making
+          your predictions once both teams in a match have been confirmed.
+        </p>
+        <p className="text-slate-300 text-sm leading-relaxed mb-5">
+          Remember to <span className="text-white font-semibold">select a winner</span> if you
+          predict a draw — that match will go to penalties and you'll need to pick who wins the
+          shootout.
+        </p>
+
+        <div className="border border-navy-500 rounded-lg p-4 mb-5">
+          <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 font-semibold">KO Match Points</p>
+
+          <p className="text-xs text-slate-500 mb-2 italic">Match decided in 90 or 120 min</p>
+          <div className="space-y-1.5 mb-4">
+            {[
+              { pts: 5, colour: 'text-green-400', label: 'Exact score' },
+              { pts: 4, colour: 'text-blue-400',  label: 'Correct goal difference' },
+              { pts: 3, colour: 'text-gold',       label: 'Correct result (win/loss)' },
+              { pts: 1, colour: 'text-slate-400',  label: 'Participated' },
+            ].map(({ pts, colour, label }) => (
+              <div key={pts} className="flex items-center gap-3">
+                <span className={`${colour} font-extrabold text-base w-4 text-right`}>{pts}</span>
+                <span className="text-slate-300 text-xs">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-slate-500 mb-2 italic">Match goes to penalties</p>
+          <div className="space-y-1.5">
+            {[
+              { pts: 5, colour: 'text-green-400', label: 'Exact score + correct winner' },
+              { pts: 4, colour: 'text-blue-400',  label: 'Correct GD + correct winner (e.g. predict 2–2, result 1–1)' },
+              { pts: 3, colour: 'text-gold',       label: 'Exact score, wrong winner' },
+              { pts: 1, colour: 'text-slate-400',  label: 'Everything else' },
+            ].map(({ pts, colour, label }) => (
+              <div key={`p${pts}${label}`} className="flex items-start gap-3">
+                <span className={`${colour} font-extrabold text-base w-4 text-right flex-shrink-0`}>{pts}</span>
+                <span className="text-slate-300 text-xs leading-snug">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full bg-gold hover:bg-gold-light text-navy-900 font-bold py-2.5 rounded-lg transition-colors"
+        >
+          Let's go!
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Inner app (needs context) ───────────────────────────────────────────────
 function InnerApp() {
   const { user, setUser, bootstrap, loading, refreshGroups } = useApp()
   const [activeTab,      setActiveTab]      = useState('rules')
-  const [showKoPopup,    setShowKoPopup]    = useState(false)
-  const [showMd3Popup,   setShowMd3Popup]   = useState(false)
+  const [showKoPopup,       setShowKoPopup]       = useState(false)
+  const [showMd3Popup,      setShowMd3Popup]      = useState(false)
+  const [showKoMatchesPopup, setShowKoMatchesPopup] = useState(false)
 
   const params    = new URLSearchParams(window.location.search)
   const joinToken = params.get('token')
@@ -130,22 +199,30 @@ function InnerApp() {
     }
   }, [])
 
-  // Show popups once per user (KO first, then MD3 scoring)
+  // Show popups once per user — chain: KO → MD3 scoring → KO matches
   useEffect(() => {
     if (!user) return
-    if (!localStorage.getItem(KO_POPUP_KEY))  { setShowKoPopup(true);  return }
-    if (!localStorage.getItem(MD3_POPUP_KEY)) { setShowMd3Popup(true); return }
+    if (!localStorage.getItem(KO_POPUP_KEY))         { setShowKoPopup(true);        return }
+    if (!localStorage.getItem(MD3_POPUP_KEY))         { setShowMd3Popup(true);       return }
+    if (!localStorage.getItem(KO_MATCHES_POPUP_KEY)) { setShowKoMatchesPopup(true); return }
   }, [user])
 
   function dismissKoPopup() {
     localStorage.setItem(KO_POPUP_KEY, '1')
     setShowKoPopup(false)
-    if (!localStorage.getItem(MD3_POPUP_KEY)) setShowMd3Popup(true)
+    if (!localStorage.getItem(MD3_POPUP_KEY))         { setShowMd3Popup(true);       return }
+    if (!localStorage.getItem(KO_MATCHES_POPUP_KEY)) { setShowKoMatchesPopup(true); return }
   }
 
   function dismissMd3Popup() {
     localStorage.setItem(MD3_POPUP_KEY, '1')
     setShowMd3Popup(false)
+    if (!localStorage.getItem(KO_MATCHES_POPUP_KEY)) setShowKoMatchesPopup(true)
+  }
+
+  function dismissKoMatchesPopup() {
+    localStorage.setItem(KO_MATCHES_POPUP_KEY, '1')
+    setShowKoMatchesPopup(false)
   }
 
   if (!user) {
@@ -162,8 +239,9 @@ function InnerApp() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {showKoPopup   && <KnockoutPopup    onClose={dismissKoPopup}  />}
-      {showMd3Popup  && <Md3ScoringPopup  onClose={dismissMd3Popup} />}
+      {showKoPopup        && <KnockoutPopup    onClose={dismissKoPopup}        />}
+      {showMd3Popup       && <Md3ScoringPopup  onClose={dismissMd3Popup}       />}
+      {showKoMatchesPopup && <KoMatchesPopup   onClose={dismissKoMatchesPopup} />}
       <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
         {activeTab === 'rules'     && <RulesTab />}
