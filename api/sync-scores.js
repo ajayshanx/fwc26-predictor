@@ -5,6 +5,10 @@
  * updates the Supabase `matches` table, and awards points
  * for any match that just completed.
  *
+ * Also handles knockout-stage automation:
+ *   A) Fills in confirmed team TLAs for R32 slots that were originally TBD
+ *   B) Auto-inserts R16 / QF / SF / 3P / F matches when FD publishes them
+ *
  * Called by cron-job.org every 2 minutes.
  * Protected by CRON_SECRET header to block unauthorised calls.
  *
@@ -36,6 +40,21 @@ const STATUS_MAP = {
   SUSPENDED:        'scheduled',
 }
 
+// football-data.org stage → our round code
+const STAGE_TO_ROUND = {
+  LAST_32:        'R32',
+  LAST_16:        'R16',
+  QUARTER_FINALS: 'QF',
+  SEMI_FINALS:    'SF',
+  THIRD_PLACE:    '3P',
+  FINAL:          'F',
+}
+
+// Venue lookup for auto-inserted KO matches.
+// Keyed by kickoff UTC string (ISO, as returned by football-data.org).
+// Add entries here if venue details matter — otherwise city/country will be null.
+const VENUE_BY_KICKOFF = {}
+
 
 export default async function handler(req, res) {
   if (req.method !== 'POST')
@@ -52,14 +71,14 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_KEY)
 
   // 1. Fetch all WC2026 matches from football-data.org ─────────────────────
-  const fdAbort    = new AbortController()
-  const fdTimeout  = setTimeout(() => fdAbort.abort(), 20_000)
+  const fdAbort   = new AbortController()
+  const fdTimeout = setTimeout(() => fdAbort.abort(), 20_000)
   let fdResponse
   try {
     fdResponse = await fetch(
       'https://api.football-data.org/v4/competitions/WC/matches?season=2026',
       {
-        signal: fdAbort.signal,
+        signal:  fdAbort.signal,
         headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY },
       }
     )
@@ -80,43 +99,44 @@ export default async function handler(req, res) {
   } catch (parseErr) {
     return res.status(200).json({ skipped: true, reason: `fd_parse_error: ${parseErr.message}`, ts: new Date().toISOString() })
   }
-  const fdMatches = fdBody.matches
+  const fdMatches = fdBody.matches ?? []
 
-  // 2. Fetch all non-completed matches from Supabase ───────────────────────
-  const { data: dbMatches, error: dbError } = await supabase
+  // 2. Fetch ALL matches from Supabase (needed for KO auto-insert dedup) ───
+  const { data: allDbMatches, error: dbError } = await supabase
     .from('matches')
-    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, penalty_winner')
-    .neq('status', 'completed')
+    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, penalty_winner, round, matchday')
 
   if (dbError)
     return res.status(200).json({ skipped: true, reason: `db_fetch_error: ${dbError.message}`, ts: new Date().toISOString() })
 
-  if (!dbMatches?.length)
-    return res.status(200).json({ message: 'No pending matches to sync', ts: new Date().toISOString() })
+  const dbMatches = allDbMatches ?? []
 
-  // 3. Diff against football-data.org results ──────────────────────────────
-  const toUpdate      = []
-  const newlyComplete = []
-
-  for (const dbMatch of dbMatches) {
+  // ── Helper: find an FD match for a DB row ────────────────────────────────
+  function findFdMatch(dbMatch) {
     const dbKickoffMs = new Date(dbMatch.kickoff_utc).getTime()
-
-    // Match by TLA (primary) — same FIFA 3-letter codes used in both systems.
-    // For KO matches with TBD slots (null home/away_team), fall back to kickoff-time window.
-    const fdMatch = fdMatches?.find(m => {
+    return fdMatches.find(m => {
+      // Primary: TLA match (only when both sides are known)
       if (dbMatch.home_team && dbMatch.away_team && m.homeTeam?.tla && m.awayTeam?.tla) {
         return m.homeTeam.tla === dbMatch.home_team && m.awayTeam.tla === dbMatch.away_team
       }
+      // Fallback: kickoff-time window ±30 min (covers TBD slots)
       return Math.abs(new Date(m.utcDate).getTime() - dbKickoffMs) < 30 * 60 * 1000
     })
+  }
+
+  // 3. Diff scores for non-completed matches ───────────────────────────────
+  const toUpdate      = []
+  const newlyComplete = []
+
+  for (const dbMatch of dbMatches.filter(m => m.status !== 'completed')) {
+    const fdMatch = findFdMatch(dbMatch)
     if (!fdMatch) continue
 
-    const newStatus   = STATUS_MAP[fdMatch.status] ?? 'scheduled'
-    const duration    = fdMatch.score?.duration   // REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
-    const newMinute   = fdMatch.minute ?? null
+    const newStatus = STATUS_MAP[fdMatch.status] ?? 'scheduled'
+    const duration  = fdMatch.score?.duration  // REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
+    const newMinute = fdMatch.minute ?? null
 
-    // For ET and pens: goals = fullTime + extraTime combined.
-    // football-data.org stores the *added* extra-time goals in score.extraTime.
+    // ET / pens: combine fullTime + extraTime goals
     let newHome, newAway, newPenaltyWinner
     if (duration === 'EXTRA_TIME' || duration === 'PENALTY_SHOOTOUT') {
       const ftHome = fdMatch.score?.fullTime?.home  ?? 0
@@ -126,12 +146,10 @@ export default async function handler(req, res) {
       newHome = ftHome + etHome
       newAway = ftAway + etAway
       if (duration === 'PENALTY_SHOOTOUT') {
-        // score.winner = 'HOME_TEAM' | 'AWAY_TEAM'
-        if (fdMatch.score?.winner === 'HOME_TEAM') {
+        if (fdMatch.score?.winner === 'HOME_TEAM')
           newPenaltyWinner = dbMatch.home_team || fdMatch.homeTeam?.tla || null
-        } else if (fdMatch.score?.winner === 'AWAY_TEAM') {
+        else if (fdMatch.score?.winner === 'AWAY_TEAM')
           newPenaltyWinner = dbMatch.away_team || fdMatch.awayTeam?.tla || null
-        }
       }
     } else {
       newHome = fdMatch.score?.fullTime?.home ?? null
@@ -147,7 +165,7 @@ export default async function handler(req, res) {
     if (!changed) continue
 
     toUpdate.push({
-      id: dbMatch.id,
+      id:             dbMatch.id,
       status:         newStatus,
       home_score:     newHome,
       away_score:     newAway,
@@ -159,9 +177,7 @@ export default async function handler(req, res) {
       newlyComplete.push(dbMatch.id)
   }
 
-  // 4. Write updates to Supabase ───────────────────────────────────────────
-  // Use .update() not .upsert() — rows always exist, upsert would try INSERT
-  // first which hits NOT NULL on kickoff_utc before the conflict check fires.
+  // 4. Write score updates to Supabase ─────────────────────────────────────
   for (const { id, status, home_score, away_score, match_minute, penalty_winner } of toUpdate) {
     const { error: updateError } = await supabase
       .from('matches')
@@ -171,7 +187,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ skipped: true, reason: `db_update_error: ${updateError.message}`, updated: 0, ts: new Date().toISOString() })
   }
 
-  // 5. Award points for newly completed matches ────────────────────────────
+  // 5. Award points for newly completed matches ─────────────────────────────
   const scoringErrors = []
   for (const matchId of newlyComplete) {
     const { error: rpcError } = await supabase.rpc('score_predictions_for_match', {
@@ -180,13 +196,95 @@ export default async function handler(req, res) {
     if (rpcError) scoringErrors.push({ matchId, error: rpcError.message })
   }
 
+  // ── A. Fill confirmed TLAs into TBD R32 slots ────────────────────────────
+  // When the group stage ends, FD updates TBD team slots with real TLAs.
+  // Find DB rows where home_team or away_team is null and update them.
+  const tbdMatches = dbMatches.filter(m => !m.home_team || !m.away_team)
+  let tbdUpdated = 0
+  for (const dbMatch of tbdMatches) {
+    const fdMatch = findFdMatch(dbMatch)
+    if (!fdMatch) continue
+    const update = {}
+    if (!dbMatch.home_team && fdMatch.homeTeam?.tla) {
+      update.home_team  = fdMatch.homeTeam.tla
+      update.home_label = null
+    }
+    if (!dbMatch.away_team && fdMatch.awayTeam?.tla) {
+      update.away_team  = fdMatch.awayTeam.tla
+      update.away_label = null
+    }
+    if (!Object.keys(update).length) continue
+    const { error } = await supabase.from('matches').update(update).eq('id', dbMatch.id)
+    if (!error) tbdUpdated++
+  }
+
+  // ── B. Auto-insert new KO rounds (R16, QF, SF, 3P, F) ───────────────────
+  // FD publishes these as the tournament progresses. Insert any we don't have.
+  const dbKickoffTimes = new Set(
+    dbMatches.map(m => new Date(m.kickoff_utc).getTime())
+  )
+
+  const fdKoMatches = fdMatches.filter(m => {
+    const round = STAGE_TO_ROUND[m.stage]
+    return round && round !== 'R32'  // R32 already manually seeded
+  })
+
+  let koInserted = 0
+  for (const fdm of fdKoMatches) {
+    const kickoffMs = new Date(fdm.utcDate).getTime()
+    // Skip if we already have a match within 30 min of this kickoff
+    const alreadyExists = [...dbKickoffTimes].some(t => Math.abs(t - kickoffMs) < 30 * 60 * 1000)
+    if (alreadyExists) continue
+
+    const round  = STAGE_TO_ROUND[fdm.stage]
+    const status = STATUS_MAP[fdm.status] ?? 'scheduled'
+    const venue  = VENUE_BY_KICKOFF[fdm.utcDate] ?? {}
+
+    // For ET/pens on auto-inserted matches that are already complete
+    let home_score = fdm.score?.fullTime?.home ?? null
+    let away_score = fdm.score?.fullTime?.away ?? null
+    let penalty_winner = null
+    const dur = fdm.score?.duration
+    if (dur === 'EXTRA_TIME' || dur === 'PENALTY_SHOOTOUT') {
+      home_score = (fdm.score?.fullTime?.home ?? 0) + (fdm.score?.extraTime?.home ?? 0)
+      away_score = (fdm.score?.fullTime?.away ?? 0) + (fdm.score?.extraTime?.away ?? 0)
+      if (dur === 'PENALTY_SHOOTOUT') {
+        if (fdm.score?.winner === 'HOME_TEAM')  penalty_winner = fdm.homeTeam?.tla || null
+        if (fdm.score?.winner === 'AWAY_TEAM')  penalty_winner = fdm.awayTeam?.tla || null
+      }
+    }
+
+    const { error } = await supabase.from('matches').insert({
+      home_team:       fdm.homeTeam?.tla  || null,
+      away_team:       fdm.awayTeam?.tla  || null,
+      home_label:      fdm.homeTeam?.tla  ? null : (fdm.homeTeam?.name  ?? null),
+      away_label:      fdm.awayTeam?.tla  ? null : (fdm.awayTeam?.name  ?? null),
+      kickoff_utc:     fdm.utcDate,
+      venue_stadium:   venue.stadium ?? fdm.venue ?? null,
+      venue_city:      venue.city    ?? null,
+      venue_country:   venue.country ?? null,
+      round,
+      status,
+      home_score,
+      away_score,
+      penalty_winner,
+    })
+
+    if (!error) {
+      koInserted++
+      dbKickoffTimes.add(kickoffMs)  // prevent re-inserting within this run
+    }
+  }
+
   return res.status(200).json({
-    checked:        dbMatches.length,
+    checked:        dbMatches.filter(m => m.status !== 'completed').length,
     updated:        toUpdate.length,
     newlyScored:    newlyComplete.length,
     scoredMatchIds: newlyComplete,
     scoringErrors:  scoringErrors.length ? scoringErrors : undefined,
-    fdMatchCount:   fdMatches?.length ?? 0,
+    tbdSlotsFixed:  tbdUpdated,
+    koRoundsAdded:  koInserted,
+    fdMatchCount:   fdMatches.length,
     ts:             new Date().toISOString(),
   })
 }
