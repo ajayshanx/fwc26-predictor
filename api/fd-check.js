@@ -32,6 +32,21 @@ export default async function handler(req, res) {
   const fdMatches = body.matches ?? []
   const completed = fdMatches.filter(m => m.status === 'FINISHED')
 
+  // KO matches from FD — shows whether FD has confirmed team TLAs yet
+  const KO_STAGES = new Set(['LAST_32','LAST_16','QUARTER_FINALS','SEMI_FINALS','THIRD_PLACE','FINAL'])
+  const fdKoMatches = fdMatches
+    .filter(m => KO_STAGES.has(m.stage))
+    .map(m => ({
+      stage:      m.stage,
+      kickoff:    m.utcDate,
+      home_tla:   m.homeTeam?.tla  ?? null,
+      home_name:  m.homeTeam?.name ?? null,
+      away_tla:   m.awayTeam?.tla  ?? null,
+      away_name:  m.awayTeam?.name ?? null,
+      fd_status:  m.status,
+      tbd:        !m.homeTeam?.tla || !m.awayTeam?.tla,
+    }))
+
   // 2. Fetch all non-completed DB matches ────────────────────────────────────
   const { data: dbMatches, error: dbErr } = await supabase
     .from('matches')
@@ -91,12 +106,18 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({
-    fdMatchCount:   fdMatches.length,
-    completedCount: completed.length,
-    dbPendingCount: dbMatches?.length ?? 0,
-    pendingUpdates: toUpdate.length,
+    fdMatchCount:     fdMatches.length,
+    completedCount:   completed.length,
+    dbPendingCount:   dbMatches?.length ?? 0,
+    pendingUpdates:   toUpdate.length,
     doWrite,
     writeResult,
     detail,
+    ko: {
+      total:     fdKoMatches.length,
+      confirmed: fdKoMatches.filter(m => !m.tbd).length,
+      tbd:       fdKoMatches.filter(m => m.tbd).length,
+      matches:   fdKoMatches,
+    },
   })
 }
