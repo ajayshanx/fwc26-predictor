@@ -28,9 +28,10 @@ begin
           when p.home_score = p.away_score
            and (p.home_score - p.away_score) = (m.home_score - m.away_score)
            and p.tiebreak_winner = m.penalty_winner         then 4
-          -- Predicted a draw (any score, any winner) = 3  (penalties are a coin flip)
-          when p.home_score = p.away_score                  then 3
-          -- Predicted an outright winner (match went to pens) = 1
+          -- Exact score + wrong winner = 3  (correct result, wrong coin flip)
+          when p.home_score = m.home_score
+           and p.away_score = m.away_score                  then 3
+          -- Everything else = 1 (wrong-score draw + wrong winner, or predicted outright winner)
           else 1
         end
       )

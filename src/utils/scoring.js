@@ -22,8 +22,8 @@ export function calcPoints(prediction, match) {
     const rightWinner   = tw === penalty_winner
     if (exactScore && rightWinner) return 5    // exact score + right winner
     if (correctGD && rightWinner && predictedDraw) return 4  // e.g. predict 2-2, match 1-1, right winner
-    if (predictedDraw)             return 3   // any draw prediction (penalties = coin flip)
-    return 1                                  // predicted outright winner, match went to pens
+    if (exactScore) return 3                   // exact score but wrong winner (correct result)
+    return 1                                   // wrong-score draw + wrong winner, or predicted outright winner
   }
 
   // ── Normal match (90-min or ET goal result) ──────────────────────────────

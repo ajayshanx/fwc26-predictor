@@ -437,9 +437,9 @@ function KnockoutMatchesContent() {
       {/* Scoring guide */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 mb-6 text-xs text-slate-500">
         <span><span className="text-slate-300 font-semibold">1 pt</span> — any prediction</span>
-        <span><span className="text-gold font-semibold">3 pts</span> — predicted draw (pens = coin flip)</span>
-        <span><span className="text-blue-400 font-semibold">4 pts</span> — correct GD + right pens winner</span>
-        <span><span className="text-green-400 font-semibold">5 pts</span> — exact score + right pens winner</span>
+        <span><span className="text-gold font-semibold">3 pts</span> — exact score, wrong winner</span>
+        <span><span className="text-blue-400 font-semibold">4 pts</span> — correct GD + right winner</span>
+        <span><span className="text-green-400 font-semibold">5 pts</span> — exact score + right winner</span>
       </div>
 
       {ROUND_ORDER.filter(r => byRound[r]).map(round => (
