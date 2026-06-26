@@ -47,13 +47,15 @@ function GroupStageContent() {
 
   const byDate = useMemo(() => {
     const map = {}
-    matches.forEach(m => {
-      const d = new Date(m.kickoff_utc).toLocaleDateString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-      }).toUpperCase()
-      if (!map[d]) map[d] = []
-      map[d].push(m)
-    })
+    matches
+      .filter(m => m.matchday !== null && m.matchday !== undefined)
+      .forEach(m => {
+        const d = new Date(m.kickoff_utc).toLocaleDateString('en-GB', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        }).toUpperCase()
+        if (!map[d]) map[d] = []
+        map[d].push(m)
+      })
     return map
   }, [matches])
 
@@ -81,7 +83,7 @@ function GroupStageContent() {
               key={m.id}
               match={m}
               prediction={predictions.find(p => p.match_id === m.id)}
-              onSave={(matchId, h, a) => savePrediction(matchId, h, a)}
+              onSave={(matchId, h, a, tw) => savePrediction(matchId, h, a, tw)}
               showPredInput
               showActual
             />
@@ -369,15 +371,100 @@ function AllQualifiedTeams({ groups, getPick, teamsMap, onSelectGroup }) {
   )
 }
 
-// ── Knockout Matches (placeholder) ───────────────────────────────────────────
+// ── Knockout Matches ─────────────────────────────────────────────────────────
+const ROUND_LABELS = {
+  R32: 'Round of 32',
+  R16: 'Round of 16',
+  QF:  'Quarter-finals',
+  SF:  'Semi-finals',
+  '3P': 'Third Place Play-off',
+  F:   'Final',
+}
+const ROUND_ORDER = ['R32', 'R16', 'QF', 'SF', '3P', 'F']
+
 function KnockoutMatchesContent() {
+  const { matches, predictions, savePrediction, knockoutPredictions } = useApp()
+
+  const koMatches = useMemo(() =>
+    matches.filter(m => m.matchday === null || m.matchday === undefined),
+    [matches]
+  )
+
+  const koPoints = knockoutPredictions
+    .filter(kp => kp.points_awarded !== null)
+    .reduce((s, kp) => s + kp.points_awarded, 0)
+
+  // Group by round, then sort each round by kickoff
+  const byRound = useMemo(() => {
+    const map = {}
+    koMatches.forEach(m => {
+      const r = m.round || 'R32'
+      if (!map[r]) map[r] = []
+      map[r].push(m)
+    })
+    Object.values(map).forEach(arr => arr.sort((a, b) => new Date(a.kickoff_utc) - new Date(b.kickoff_utc)))
+    return map
+  }, [koMatches])
+
+  const scoredKo = predictions.filter(p => {
+    const m = koMatches.find(x => x.id === p.match_id)
+    return m && m.status === 'completed' && p.points_awarded !== null
+  })
+  const koMatchPts = scoredKo.reduce((s, p) => s + p.points_awarded, 0)
+  const totalPts   = koMatchPts + koPoints
+
+  if (koMatches.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-5xl mb-4">⚔️</p>
+        <p className="text-white font-semibold text-lg">Coming Soon</p>
+        <p className="text-slate-400 mt-2 text-sm max-w-xs mx-auto">
+          Knockout matchups will appear here once the group stage ends.
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className="text-center py-20">
-      <p className="text-5xl mb-4">⚔️</p>
-      <p className="text-white font-semibold text-lg">Coming Soon</p>
-      <p className="text-slate-400 mt-2 text-sm max-w-sm mx-auto">
-        Once the group stage ends and knockout matchups are confirmed, you'll be able to predict scores and winners here.
-      </p>
+    <div>
+      {/* Stats row */}
+      <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-3">
+        <StatTile label="KO Matches"  sub="total"         value={`${scoredKo.length}/${koMatches.length}`} />
+        <StatTile label="KO Points"   sub="from matches"  value={koMatchPts} highlight />
+        <StatTile label="Total KO Pts" sub="match + teams" value={totalPts}  highlight />
+      </div>
+
+      {/* Scoring guide */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-6 text-xs text-slate-500">
+        <span><span className="text-slate-300 font-semibold">1 pt</span> — any prediction</span>
+        <span><span className="text-gold font-semibold">3 pts</span> — predicted draw (pens = coin flip)</span>
+        <span><span className="text-blue-400 font-semibold">4 pts</span> — correct GD + right pens winner</span>
+        <span><span className="text-green-400 font-semibold">5 pts</span> — exact score + right pens winner</span>
+      </div>
+
+      {ROUND_ORDER.filter(r => byRound[r]).map(round => (
+        <div key={round} className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-gold font-bold text-sm tracking-widest">
+              {ROUND_LABELS[round] || round}
+            </h3>
+            <span className="text-slate-500 text-xs">{byRound[round].length} MATCHES</span>
+          </div>
+          {byRound[round].map(m => {
+            const bothKnown = !!m.home_team && !!m.away_team
+            return (
+              <MatchRow
+                key={m.id}
+                match={m}
+                prediction={predictions.find(p => p.match_id === m.id)}
+                onSave={bothKnown ? (matchId, h, a, tw) => savePrediction(matchId, h, a, tw) : undefined}
+                showPredInput={bothKnown}
+                showActual
+              />
+            )
+          })}
+        </div>
+      ))}
     </div>
   )
 }

@@ -2,16 +2,21 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import MatchRow from '../components/MatchRow'
 
-const MATCHDAYS = ['All Matches', 'Matchday 1', 'Matchday 2', 'Matchday 3']
+const FILTERS = [
+  { label: 'All Matches',      fn: () => true },
+  { label: 'Matchday 1',       fn: m => m.matchday === 1 },
+  { label: 'Matchday 2',       fn: m => m.matchday === 2 },
+  { label: 'Matchday 3',       fn: m => m.matchday === 3 },
+  { label: 'Knockout Matches', fn: m => m.matchday === null || m.matchday === undefined },
+]
 
 export default function ScheduleTab() {
   const { matches, predictions } = useApp()
-  const [matchday, setMatchday] = useState(0)  // 0 = all
+  const [filterIdx, setFilterIdx] = useState(0)
 
   const filtered = useMemo(() => {
-    if (matchday === 0) return matches
-    return matches.filter(m => m.matchday === matchday)
-  }, [matches, matchday])
+    return matches.filter(FILTERS[filterIdx].fn)
+  }, [matches, filterIdx])
 
   // Group by date
   const byDate = useMemo(() => {
@@ -28,14 +33,14 @@ export default function ScheduleTab() {
 
   return (
     <div>
-      {/* Matchday tabs */}
+      {/* Filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
-        {MATCHDAYS.map((label, i) => (
+        {FILTERS.map(({ label }, i) => (
           <button
             key={i}
-            onClick={() => setMatchday(i)}
+            onClick={() => setFilterIdx(i)}
             className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-colors
-              ${matchday === i
+              ${filterIdx === i
                 ? 'bg-gold text-navy-900'
                 : 'bg-navy-700 text-slate-400 hover:text-white border border-navy-500'}`}
           >

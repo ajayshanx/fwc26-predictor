@@ -85,7 +85,7 @@ export default async function handler(req, res) {
   // 2. Fetch all non-completed matches from Supabase ───────────────────────
   const { data: dbMatches, error: dbError } = await supabase
     .from('matches')
-    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score')
+    .select('id, home_team, away_team, kickoff_utc, status, home_score, away_score, penalty_winner')
     .neq('status', 'completed')
 
   if (dbError)
@@ -102,28 +102,58 @@ export default async function handler(req, res) {
     const dbKickoffMs = new Date(dbMatch.kickoff_utc).getTime()
 
     // Match by TLA (primary) — same FIFA 3-letter codes used in both systems.
-    // Fall back to kickoff-time window if TLA is missing (shouldn't happen for WC).
+    // For KO matches with TBD slots (null home/away_team), fall back to kickoff-time window.
     const fdMatch = fdMatches?.find(m => {
-      if (m.homeTeam?.tla && m.awayTeam?.tla) {
+      if (dbMatch.home_team && dbMatch.away_team && m.homeTeam?.tla && m.awayTeam?.tla) {
         return m.homeTeam.tla === dbMatch.home_team && m.awayTeam.tla === dbMatch.away_team
       }
       return Math.abs(new Date(m.utcDate).getTime() - dbKickoffMs) < 30 * 60 * 1000
     })
     if (!fdMatch) continue
 
-    const newStatus = STATUS_MAP[fdMatch.status] ?? 'scheduled'
-    const newHome   = fdMatch.score?.fullTime?.home ?? null
-    const newAway   = fdMatch.score?.fullTime?.away ?? null
-    const newMinute = fdMatch.minute ?? null
+    const newStatus   = STATUS_MAP[fdMatch.status] ?? 'scheduled'
+    const duration    = fdMatch.score?.duration   // REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
+    const newMinute   = fdMatch.minute ?? null
+
+    // For ET and pens: goals = fullTime + extraTime combined.
+    // football-data.org stores the *added* extra-time goals in score.extraTime.
+    let newHome, newAway, newPenaltyWinner
+    if (duration === 'EXTRA_TIME' || duration === 'PENALTY_SHOOTOUT') {
+      const ftHome = fdMatch.score?.fullTime?.home  ?? 0
+      const ftAway = fdMatch.score?.fullTime?.away  ?? 0
+      const etHome = fdMatch.score?.extraTime?.home ?? 0
+      const etAway = fdMatch.score?.extraTime?.away ?? 0
+      newHome = ftHome + etHome
+      newAway = ftAway + etAway
+      if (duration === 'PENALTY_SHOOTOUT') {
+        // score.winner = 'HOME_TEAM' | 'AWAY_TEAM'
+        if (fdMatch.score?.winner === 'HOME_TEAM') {
+          newPenaltyWinner = dbMatch.home_team || fdMatch.homeTeam?.tla || null
+        } else if (fdMatch.score?.winner === 'AWAY_TEAM') {
+          newPenaltyWinner = dbMatch.away_team || fdMatch.awayTeam?.tla || null
+        }
+      }
+    } else {
+      newHome = fdMatch.score?.fullTime?.home ?? null
+      newAway = fdMatch.score?.fullTime?.away ?? null
+    }
 
     const changed =
       newStatus !== dbMatch.status     ||
       newHome   !== dbMatch.home_score ||
-      newAway   !== dbMatch.away_score
+      newAway   !== dbMatch.away_score ||
+      (newPenaltyWinner != null && newPenaltyWinner !== dbMatch.penalty_winner)
 
     if (!changed) continue
 
-    toUpdate.push({ id: dbMatch.id, status: newStatus, home_score: newHome, away_score: newAway, match_minute: newMinute })
+    toUpdate.push({
+      id: dbMatch.id,
+      status:         newStatus,
+      home_score:     newHome,
+      away_score:     newAway,
+      match_minute:   newMinute,
+      penalty_winner: newPenaltyWinner ?? dbMatch.penalty_winner ?? null,
+    })
 
     if (newStatus === 'completed' && dbMatch.status !== 'completed')
       newlyComplete.push(dbMatch.id)
@@ -132,10 +162,10 @@ export default async function handler(req, res) {
   // 4. Write updates to Supabase ───────────────────────────────────────────
   // Use .update() not .upsert() — rows always exist, upsert would try INSERT
   // first which hits NOT NULL on kickoff_utc before the conflict check fires.
-  for (const { id, status, home_score, away_score, match_minute } of toUpdate) {
+  for (const { id, status, home_score, away_score, match_minute, penalty_winner } of toUpdate) {
     const { error: updateError } = await supabase
       .from('matches')
-      .update({ status, home_score, away_score, match_minute })
+      .update({ status, home_score, away_score, match_minute, penalty_winner })
       .eq('id', id)
     if (updateError)
       return res.status(200).json({ skipped: true, reason: `db_update_error: ${updateError.message}`, updated: 0, ts: new Date().toISOString() })

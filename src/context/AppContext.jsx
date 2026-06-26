@@ -114,12 +114,14 @@ export function AppProvider({ children }) {
   }, [activeGroup])
 
   // ── Save / update a match prediction ────────────────────────────────────
-  const savePrediction = useCallback(async (matchId, homeScore, awayScore) => {
+  const savePrediction = useCallback(async (matchId, homeScore, awayScore, tiebreakWinner = null) => {
     if (!user) return
     const { data, error } = await supabase
       .from('predictions')
-      .upsert({ user_id: user.id, match_id: matchId, home_score: homeScore, away_score: awayScore },
-               { onConflict: 'user_id,match_id' })
+      .upsert(
+        { user_id: user.id, match_id: matchId, home_score: homeScore, away_score: awayScore, tiebreak_winner: tiebreakWinner },
+        { onConflict: 'user_id,match_id' }
+      )
       .select()
       .single()
     if (!error && data) {

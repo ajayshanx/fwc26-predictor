@@ -10,13 +10,27 @@ export function calcPoints(prediction, match) {
   if (!prediction) return 0
   if (match.status !== 'completed') return null  // pending
 
-  const { home_score: ph, away_score: pa } = prediction
-  const { home_score: mh, away_score: ma, matchday } = match
+  const { home_score: ph, away_score: pa, tiebreak_winner: tw } = prediction
+  const { home_score: mh, away_score: ma, matchday, penalty_winner } = match
+  const isKO = matchday === null || matchday === undefined
 
+  // ── Knockout penalty scenario ────────────────────────────────────────────
+  if (isKO && penalty_winner) {
+    const predictedDraw = ph === pa
+    const exactScore    = ph === mh && pa === ma
+    const correctGD     = (ph - pa) === (mh - ma)  // for draws: 0 === 0
+    const rightWinner   = tw === penalty_winner
+    if (exactScore && rightWinner) return 5    // exact score + right winner
+    if (correctGD && rightWinner && predictedDraw) return 4  // e.g. predict 2-2, match 1-1, right winner
+    if (predictedDraw)             return 3   // any draw prediction (penalties = coin flip)
+    return 1                                  // predicted outright winner, match went to pens
+  }
+
+  // ── Normal match (90-min or ET goal result) ──────────────────────────────
   if (ph === mh && pa === ma) return 5
 
   const correctResult = Math.sign(ph - pa) === Math.sign(mh - ma)
-  const md3plus = matchday === null || matchday === undefined || matchday >= 3
+  const md3plus       = isKO || matchday >= 3
 
   if (correctResult && md3plus && (ph - pa) === (mh - ma)) return 4
   if (correctResult) return 3
