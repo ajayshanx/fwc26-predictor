@@ -12,7 +12,7 @@ const FILTERS = [
 
 export default function ScheduleTab() {
   const { matches, predictions } = useApp()
-  const [filterIdx, setFilterIdx] = useState(0)
+  const [filterIdx, setFilterIdx] = useState(4)
 
   const filtered = useMemo(() => {
     return matches.filter(FILTERS[filterIdx].fn)

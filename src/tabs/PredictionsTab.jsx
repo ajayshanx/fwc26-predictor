@@ -9,7 +9,7 @@ const KNOCKOUT_DEADLINE = new Date('2026-06-24T18:00:00Z') // 20:00 CEST (UTC+2)
 const SUB_TABS = ['Group Stage', 'Knockout Teams', 'Knockout Matches']
 
 export default function PredictionsTab() {
-  const [subTab, setSubTab] = useState('Group Stage')
+  const [subTab, setSubTab] = useState('Knockout Matches')
 
   return (
     <div>
