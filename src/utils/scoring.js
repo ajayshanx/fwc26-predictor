@@ -2,7 +2,13 @@
  * Calculate points for a single prediction against a completed match result.
  *
  * MD1 & MD2:  Exact score = 5 | Correct result = 3 | Participated = 1
- * MD3+:       Exact score = 5 | Correct GD     = 4 | Correct result = 3 | Participated = 1
+ * MD3+:       Exact score = 5 | Correct GD = 4 | Correct result = 3 | Participated = 1
+ *
+ * KO penalty shootout:
+ *   5 = exact AET score + right penalty winner
+ *   4 = right GD + predicted draw + right penalty winner
+ *   3 = exact AET score (wrong winner) OR predicted right team outright (non-draw)
+ *   1 = wrong winner or wrong draw pick
  *
  * "MD3+" includes matchday >= 3 AND knockout matches (matchday null).
  */
@@ -16,14 +22,18 @@ export function calcPoints(prediction, match) {
 
   // ── Knockout penalty scenario ────────────────────────────────────────────
   if (isKO && penalty_winner) {
+    const { home_team, away_team } = match
     const predictedDraw = ph === pa
     const exactScore    = ph === mh && pa === ma
     const correctGD     = (ph - pa) === (mh - ma)  // for draws: 0 === 0
     const rightWinner   = tw === penalty_winner
+    // Non-draw prediction: did they implicitly pick the right team?
+    const impliedWinner = !predictedDraw ? (ph > pa ? home_team : away_team) : null
+    const rightDirection = impliedWinner === penalty_winner
     if (exactScore && rightWinner) return 5    // exact score + right winner
     if (correctGD && rightWinner && predictedDraw) return 4  // e.g. predict 2-2, match 1-1, right winner
-    if (exactScore) return 3                   // exact score but wrong winner (correct result)
-    return 1                                   // wrong-score draw + wrong winner, or predicted outright winner
+    if (exactScore || (!predictedDraw && rightDirection)) return 3  // exact score OR right team outright
+    return 1                                   // wrong winner or wrong draw pick
   }
 
   // ── Normal match (90-min or ET goal result) ──────────────────────────────

@@ -10,7 +10,7 @@ returns void language plpgsql as $$
 declare
   m record;
 begin
-  select home_score, away_score, matchday, penalty_winner
+  select home_score, away_score, matchday, penalty_winner, home_team, away_team
     into m
   from public.matches
   where id = match_id_in;
@@ -20,7 +20,7 @@ begin
       -- ── KO match that went to penalties ──────────────────────────────
       when m.matchday is null and m.penalty_winner is not null then (
         case
-          -- Exact score + correct penalty winner = 5  (e.g. predict 1-1, pick right winner)
+          -- Exact score + correct penalty winner = 5
           when p.home_score = m.home_score
            and p.away_score = m.away_score
            and p.tiebreak_winner = m.penalty_winner         then 5
@@ -28,10 +28,13 @@ begin
           when p.home_score = p.away_score
            and (p.home_score - p.away_score) = (m.home_score - m.away_score)
            and p.tiebreak_winner = m.penalty_winner         then 4
-          -- Exact score + wrong winner = 3  (correct result, wrong coin flip)
-          when p.home_score = m.home_score
-           and p.away_score = m.away_score                  then 3
-          -- Everything else = 1 (wrong-score draw + wrong winner, or predicted outright winner)
+          -- Exact score (wrong winner) OR right team outright (non-draw) = 3
+          when (p.home_score = m.home_score and p.away_score = m.away_score)
+            or (p.home_score <> p.away_score and (
+                 (p.home_score > p.away_score and m.home_team = m.penalty_winner) or
+                 (p.away_score > p.home_score and m.away_team = m.penalty_winner)
+               ))                                           then 3
+          -- Wrong winner or wrong draw pick = 1
           else 1
         end
       )
