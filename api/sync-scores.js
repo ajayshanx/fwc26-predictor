@@ -7,9 +7,9 @@
  *
  * Knockout automation:
  *   A) Fills confirmed team TLAs into TBD R32 slots from FD data
- *   B) Safety-net: auto-inserts R16+ matches from FD if not already in DB
  *   C) Bracket propagation: when a match completes, writes the winner's TLA
  *      directly into the next match's slot using the hardcoded bracket map
+ *   (R16+ matches are pre-seeded by bracket-progression.sql — no auto-insert needed)
  *
  * Called by cron-job.org every 2 minutes.
  * Protected by CRON_SECRET header to block unauthorised calls.
@@ -263,37 +263,11 @@ export default async function handler(req, res) {
     if (!error) tbdUpdated++
   }
 
-  // ── B. Safety-net: auto-insert R16+ matches from FD if not in DB ─────────
-  const dbKickoffMs = new Set(dbMatches.map(m => new Date(m.kickoff_utc).getTime()))
-  const fdKoMatches = fdMatches.filter(m => { const r = STAGE_TO_ROUND[m.stage]; return r && r !== 'R32' })
-  let koInserted = 0
-  for (const fdm of fdKoMatches) {
-    const kickMs = new Date(fdm.utcDate).getTime()
-    if ([...dbKickoffMs].some(t => Math.abs(t - kickMs) < 90 * 60 * 1000)) continue
-    const round  = STAGE_TO_ROUND[fdm.stage]
-    const status = STATUS_MAP[fdm.status] ?? 'scheduled'
-    const venue  = VENUE_BY_KICKOFF[fdm.utcDate] ?? {}
-    let home_score = fdm.score?.fullTime?.home ?? null
-    let away_score = fdm.score?.fullTime?.away ?? null
-    let penalty_winner = null
-    const dur = fdm.score?.duration
-    if (dur === 'EXTRA_TIME' || dur === 'PENALTY_SHOOTOUT') {
-      home_score = (fdm.score?.fullTime?.home ?? 0) + (fdm.score?.extraTime?.home ?? 0)
-      away_score = (fdm.score?.fullTime?.away ?? 0) + (fdm.score?.extraTime?.away ?? 0)
-      if (dur === 'PENALTY_SHOOTOUT') {
-        if (fdm.score?.winner === 'HOME_TEAM') penalty_winner = fdm.homeTeam?.tla || null
-        if (fdm.score?.winner === 'AWAY_TEAM') penalty_winner = fdm.awayTeam?.tla || null
-      }
-    }
-    const { error } = await supabase.from('matches').insert({
-      home_team: fdm.homeTeam?.tla || null, home_label: fdm.homeTeam?.tla ? null : (fdm.homeTeam?.name ?? null),
-      away_team: fdm.awayTeam?.tla || null, away_label: fdm.awayTeam?.tla ? null : (fdm.awayTeam?.name ?? null),
-      kickoff_utc: fdm.utcDate, venue_stadium: venue.stadium ?? null,
-      venue_city: venue.city ?? null, venue_country: venue.country ?? null,
-      round, status, home_score, away_score, penalty_winner,
-    })
-    if (!error) { koInserted++; dbKickoffMs.add(kickMs) }
-  }
+  // ── B. Safety-net auto-insert removed ────────────────────────────────────
+  // R16+ matches are pre-seeded by bracket-progression.sql with match_number.
+  // Section B was creating duplicates; bracket propagation (Section C) fills
+  // confirmed team TLAs as results come in.
+  const koInserted = 0
 
   // ── C. Bracket propagation ────────────────────────────────────────────────
   // For each newly completed KO match, write the winner's TLA into the next
