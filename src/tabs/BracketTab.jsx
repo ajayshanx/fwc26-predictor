@@ -13,7 +13,10 @@ const R_SF    = 88   // SF result nodes
 // Final is at center (CX, CY)
 
 const FR       = 18   // outer flag radius
-const R_LABEL  = 298  // radius for kickoff date/time labels (between pair node and flags)
+const R_LABEL  = 298  // radius for R32 kickoff labels (between outer flags and pair nodes)
+const R_LABEL_R16 = 234  // between pair nodes and R16 nodes
+const R_LABEL_QF  = 172  // between R16 and QF nodes
+const R_LABEL_SF  = 114  // between QF and SF nodes
 
 // ISO flag codes (flagcdn.com)
 const FC = {
@@ -96,7 +99,7 @@ function FlagNode({ cx, cy, r, tla, dim = false, glow = false }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function BracketTab() {
   const { matches } = useApp()
-  const [hoveredPair, setHoveredPair] = useState(null)
+  const [hoveredLabel, setHoveredLabel] = useState(null)
 
   const byNum = useMemo(() => {
     const m = {}
@@ -246,51 +249,13 @@ export default function BracketTab() {
             return <FlagNode key={`r16n-${j}`} cx={rx} cy={ry} r={FR} tla={getWinner(mn)} />
           })}
 
-          {/* Kickoff date/time labels — between each flag pair and their pair node */}
-          {R32_MNS.map((mn, k) => {
-            const m = byNum[mn]
-            if (!m) return null
-            const { time, date } = fmtKickoff(m.kickoff_utc)
-            const a    = pairAngle(k)
-            const aDeg = a * 180 / Math.PI
-            const [lx, ly] = polar(R_LABEL, a)
-            const rot  = (aDeg >= 0 && aDeg <= 180) ? aDeg - 90 : aDeg + 90
-            const isHovered = hoveredPair === k
-            const done = m.status === 'completed'
-            return (
-              <g key={`lbl-${k}`} transform={`translate(${lx},${ly}) rotate(${rot})`}
-                style={{ cursor: 'default' }}
-                onMouseEnter={() => setHoveredPair(k)}
-                onMouseLeave={() => setHoveredPair(null)}
-              >
-                {/* Invisible hover target */}
-                <rect x={-22} y={-13} width={44} height={26} fill="transparent" />
-                {/* Text group — scales up on hover */}
-                <g style={{
-                  transform: isHovered ? 'scale(2.4)' : 'scale(1)',
-                  transformOrigin: '0px 0px',
-                  transition: 'transform 0.15s ease',
-                }}>
-                  <text textAnchor="middle" fontSize={8.5} fontWeight="600"
-                    fill={done ? '#4b5563' : '#e2e8f0'} y={-3}>
-                    {time}
-                  </text>
-                  <text textAnchor="middle" fontSize={7}
-                    fill={done ? '#374151' : '#94a3b8'} y={7}>
-                    {date}
-                  </text>
-                </g>
-              </g>
-            )
-          })}
-
           {/* Pair (R32 result) nodes */}
           {R32_MNS.map((mn, k) => {
             const [px, py] = polar(R_PAIR, pairAngle(k))
             return <FlagNode key={`pn-${k}`} cx={px} cy={py} r={FR} tla={getWinner(mn)} />
           })}
 
-          {/* Outer team flags — drawn last so they sit on top */}
+          {/* Outer team flags */}
           {OUTER.map(([mn, side], idx) => {
             const [fx, fy] = polar(R_OUTER, toRad(idx))
             return (
@@ -302,6 +267,55 @@ export default function BracketTab() {
               />
             )
           })}
+
+          {/* Kickoff date/time labels for all bracket rings — rendered last so they sit above flags */}
+          {[
+            { mns: R32_MNS, angleOf: k => pairAngle(k), radius: R_LABEL,       prefix: 'r32' },
+            { mns: R16_MNS, angleOf: j => r16Angle(j),  radius: R_LABEL_R16,   prefix: 'r16' },
+            { mns: QF_MNS,  angleOf: i => qfAngle(i),   radius: R_LABEL_QF,    prefix: 'qf'  },
+            { mns: SF_MNS,  angleOf: i => sfAngle(i),   radius: R_LABEL_SF,    prefix: 'sf'  },
+          ].flatMap(({ mns, angleOf, radius, prefix }) =>
+            mns.map((mn, idx) => {
+              const m = byNum[mn]
+              if (!m) return null
+              const { time, date } = fmtKickoff(m.kickoff_utc)
+              if (!time && !date) return null
+              const key  = `${prefix}-${idx}`
+              const a    = angleOf(idx)
+              const aDeg = a * 180 / Math.PI
+              const [lx, ly] = polar(radius, a)
+              const rot  = (aDeg >= 0 && aDeg <= 180) ? aDeg - 90 : aDeg + 90
+              const isHovered = hoveredLabel === key
+              const done = m.status === 'completed'
+              return (
+                <g key={`lbl-${key}`} transform={`translate(${lx},${ly}) rotate(${rot})`}
+                  style={{ cursor: 'default' }}
+                  onMouseEnter={() => setHoveredLabel(key)}
+                  onMouseLeave={() => setHoveredLabel(null)}
+                >
+                  <rect x={-24} y={-14} width={48} height={28} fill="transparent" />
+                  <g style={{
+                    transform: isHovered ? 'scale(2.4)' : 'scale(1)',
+                    transformOrigin: '0px 0px',
+                    transition: 'transform 0.15s ease',
+                  }}>
+                    {isHovered && (
+                      <rect x={-26} y={-14} width={52} height={28} rx={5}
+                        fill="#0a0f1c" stroke="#334155" strokeWidth={0.6} opacity={0.95} />
+                    )}
+                    <text textAnchor="middle" fontSize={8.5} fontWeight="600"
+                      fill={done ? '#6b7280' : '#f1f5f9'} y={-3}>
+                      {time}
+                    </text>
+                    <text textAnchor="middle" fontSize={7}
+                      fill={done ? '#4b5563' : '#cbd5e1'} y={7}>
+                      {date}
+                    </text>
+                  </g>
+                </g>
+              )
+            })
+          )}
         </svg>
       </div>
 
