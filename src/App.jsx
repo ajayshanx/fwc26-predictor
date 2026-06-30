@@ -9,10 +9,12 @@ import PredictionsTab from './tabs/PredictionsTab'
 import StandingsTab  from './tabs/StandingsTab'
 import PointsTableTab from './tabs/PointsTableTab'
 import FeedbackTab   from './tabs/FeedbackTab'
+import BracketTab    from './tabs/BracketTab'
 
 // ── Tab definition ──────────────────────────────────────────────────────────
 const TABS = [
   { id: 'rules',     label: 'Rules'       },
+  { id: 'bracket',   label: 'Bracket'     },
   { id: 'schedule',  label: 'Schedule'    },
   { id: 'share',     label: 'Groups'      },
   { id: 'predict',   label: 'Predictions' },
@@ -245,6 +247,7 @@ function InnerApp() {
       <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
         {activeTab === 'rules'     && <RulesTab />}
+        {activeTab === 'bracket'   && <BracketTab />}
         {activeTab === 'schedule'  && <ScheduleTab />}
         {activeTab === 'share'     && <SharePlayTab />}
         {activeTab === 'predict'   && <PredictionsTab />}
