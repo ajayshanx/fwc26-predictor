@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -96,6 +96,7 @@ function FlagNode({ cx, cy, r, tla, dim = false, glow = false }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function BracketTab() {
   const { matches } = useApp()
+  const [hoveredPair, setHoveredPair] = useState(null)
 
   const byNum = useMemo(() => {
     const m = {}
@@ -230,19 +231,19 @@ export default function BracketTab() {
           {/* SF nodes */}
           {SF_MNS.map((mn, i) => {
             const [sx, sy] = polar(R_SF, sfAngle(i))
-            return <FlagNode key={`sfn-${i}`} cx={sx} cy={sy} r={16} tla={getWinner(mn)} />
+            return <FlagNode key={`sfn-${i}`} cx={sx} cy={sy} r={FR} tla={getWinner(mn)} />
           })}
 
           {/* QF nodes */}
           {QF_MNS.map((mn, i) => {
             const [qx, qy] = polar(R_QF, qfAngle(i))
-            return <FlagNode key={`qfn-${i}`} cx={qx} cy={qy} r={13} tla={getWinner(mn)} />
+            return <FlagNode key={`qfn-${i}`} cx={qx} cy={qy} r={FR} tla={getWinner(mn)} />
           })}
 
           {/* R16 nodes */}
           {R16_MNS.map((mn, j) => {
             const [rx, ry] = polar(R_R16, r16Angle(j))
-            return <FlagNode key={`r16n-${j}`} cx={rx} cy={ry} r={11} tla={getWinner(mn)} />
+            return <FlagNode key={`r16n-${j}`} cx={rx} cy={ry} r={FR} tla={getWinner(mn)} />
           })}
 
           {/* Kickoff date/time labels — between each flag pair and their pair node */}
@@ -250,20 +251,35 @@ export default function BracketTab() {
             const m = byNum[mn]
             if (!m) return null
             const { time, date } = fmtKickoff(m.kickoff_utc)
-            const a      = pairAngle(k)
-            const aDeg   = a * 180 / Math.PI
+            const a    = pairAngle(k)
+            const aDeg = a * 180 / Math.PI
             const [lx, ly] = polar(R_LABEL, a)
-            // Tangential rotation so text reads along the arc; flip bottom half to avoid inversion
-            const rot = (aDeg >= 0 && aDeg <= 180) ? aDeg - 90 : aDeg + 90
+            const rot  = (aDeg >= 0 && aDeg <= 180) ? aDeg - 90 : aDeg + 90
+            const isHovered = hoveredPair === k
+            const done = m.status === 'completed'
             return (
-              <g key={`lbl-${k}`} transform={`translate(${lx},${ly}) rotate(${rot})`}>
-                <text textAnchor="middle" fontSize={8.5} fontWeight="600"
-                  fill={m.status === 'completed' ? '#374151' : '#c9d1d9'} y={-3}>
-                  {time}
-                </text>
-                <text textAnchor="middle" fontSize={7} fill={m.status === 'completed' ? '#1f2937' : '#8b949e'} y={7}>
-                  {date}
-                </text>
+              <g key={`lbl-${k}`} transform={`translate(${lx},${ly}) rotate(${rot})`}
+                style={{ cursor: 'default' }}
+                onMouseEnter={() => setHoveredPair(k)}
+                onMouseLeave={() => setHoveredPair(null)}
+              >
+                {/* Invisible hover target */}
+                <rect x={-22} y={-13} width={44} height={26} fill="transparent" />
+                {/* Text group — scales up on hover */}
+                <g style={{
+                  transform: isHovered ? 'scale(2.4)' : 'scale(1)',
+                  transformOrigin: '0px 0px',
+                  transition: 'transform 0.15s ease',
+                }}>
+                  <text textAnchor="middle" fontSize={8.5} fontWeight="600"
+                    fill={done ? '#4b5563' : '#e2e8f0'} y={-3}>
+                    {time}
+                  </text>
+                  <text textAnchor="middle" fontSize={7}
+                    fill={done ? '#374151' : '#94a3b8'} y={7}>
+                    {date}
+                  </text>
+                </g>
               </g>
             )
           })}
@@ -271,7 +287,7 @@ export default function BracketTab() {
           {/* Pair (R32 result) nodes */}
           {R32_MNS.map((mn, k) => {
             const [px, py] = polar(R_PAIR, pairAngle(k))
-            return <FlagNode key={`pn-${k}`} cx={px} cy={py} r={8} tla={getWinner(mn)} />
+            return <FlagNode key={`pn-${k}`} cx={px} cy={py} r={FR} tla={getWinner(mn)} />
           })}
 
           {/* Outer team flags — drawn last so they sit on top */}
