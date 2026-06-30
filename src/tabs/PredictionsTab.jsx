@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import MatchRow from '../components/MatchRow'
 import FlagIcon from '../components/FlagIcon'
-import { aggregateStats } from '../utils/scoring'
+import { aggregateStats, calcPoints } from '../utils/scoring'
 import { computeStandings } from '../utils/standings'
 
 const KNOCKOUT_DEADLINE = new Date('2026-06-24T18:00:00Z') // 20:00 CEST (UTC+2) on 24 June — 1hr before MD3
@@ -394,6 +394,21 @@ function KnockoutMatchesContent() {
     .filter(kp => kp.points_awarded !== null)
     .reduce((s, kp) => s + kp.points_awarded, 0)
 
+  // Calculate KO match points via calcPoints() — don't rely on DB points_awarded
+  // (manually-patched matches may have points_awarded = null even when completed)
+  const { koMatchPts, scoredKoCount } = useMemo(() => {
+    let pts = 0, count = 0
+    for (const m of koMatches) {
+      if (m.status !== 'completed') continue
+      const pred = predictions.find(p => p.match_id === m.id)
+      const p = calcPoints(pred, m)
+      if (p !== null) { pts += p; count++ }
+    }
+    return { koMatchPts: pts, scoredKoCount: count }
+  }, [koMatches, predictions])
+
+  const totalPts = koMatchPts + koPoints
+
   // Group by round, then sort each round by kickoff
   const byRound = useMemo(() => {
     const map = {}
@@ -405,13 +420,6 @@ function KnockoutMatchesContent() {
     Object.values(map).forEach(arr => arr.sort((a, b) => new Date(a.kickoff_utc) - new Date(b.kickoff_utc)))
     return map
   }, [koMatches])
-
-  const scoredKo = predictions.filter(p => {
-    const m = koMatches.find(x => x.id === p.match_id)
-    return m && m.status === 'completed' && p.points_awarded !== null
-  })
-  const koMatchPts = scoredKo.reduce((s, p) => s + p.points_awarded, 0)
-  const totalPts   = koMatchPts + koPoints
 
   if (koMatches.length === 0) {
     return (
@@ -429,7 +437,7 @@ function KnockoutMatchesContent() {
     <div>
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-3">
-        <StatTile label="KO Matches"  sub="total"         value={`${scoredKo.length}/${koMatches.length}`} />
+        <StatTile label="KO Matches"  sub="total"         value={`${scoredKoCount}/${koMatches.length}`} />
         <StatTile label="KO Points"   sub="from matches"  value={koMatchPts} highlight />
         <StatTile label="Total KO Pts" sub="match + teams" value={totalPts}  highlight />
       </div>
